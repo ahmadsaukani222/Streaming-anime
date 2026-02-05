@@ -48,9 +48,11 @@ jobs:
         acl = private
         EOF
     
-    - name: Deploy to R2
+    - name: Deploy to R2 (Frontend Only)
       run: |
-        rclone sync ./app/dist r2:${{ secrets.R2_BUCKET_NAME }} --delete-during --progress
+        # ⚠️ PENTING: Deploy ke subfolder 'frontend/' agar file MP4 tidak terhapus
+        # File MP4 streaming tetap aman di root atau folder 'videos/'
+        rclone sync ./app/dist r2:${{ secrets.R2_BUCKET_NAME }}/frontend --delete-during --progress
     
     - name: Purge Cloudflare Cache (Optional)
       if: secrets.CLOUDFLARE_ZONE_ID != ''
