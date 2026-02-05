@@ -31,8 +31,6 @@ export default defineConfig({
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name?.split('.') || [];
-          const ext = info[info.length - 1];
           if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico|webp)$/i.test(assetInfo.name || '')) {
             return `assets/images/[name]-[hash][extname]`;
           }
@@ -43,14 +41,8 @@ export default defineConfig({
         },
       },
     },
-    // Minification
+    // Minification with Terser
     minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
     // Target modern browsers for smaller bundles
     target: 'es2020',
   },
