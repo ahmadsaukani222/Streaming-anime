@@ -91,17 +91,12 @@ export default function Admin() {
     setIsUploadingLogo(true);
     
     try {
-      // Generate timestamp for unique filename
-      const timestamp = Date.now();
-      
-      // Get presigned URL from backend
-      const response = await apiFetch(`${BACKEND_URL}/api/upload/presign`, {
+      // Get presigned URL from backend (logo endpoint)
+      const response = await apiFetch(`${BACKEND_URL}/api/upload/logo`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          animeTitle: 'site-assets',
-          episode: timestamp,
-          quality: 'logo',
+          filename: file.name,
           contentType: file.type
         })
       });

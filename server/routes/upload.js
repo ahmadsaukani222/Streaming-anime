@@ -45,6 +45,42 @@ const upload = multer({
 });
 
 /**
+ * POST /api/upload/logo
+ * Generate presigned URL for site logo upload
+ */
+router.post('/logo', async (req, res) => {
+    try {
+        const { filename, contentType } = req.body;
+        
+        if (!filename) {
+            return res.status(400).json({ error: 'filename is required' });
+        }
+        
+        const key = `assets/logo/${Date.now()}-${filename}`;
+        
+        console.log(`[Upload] Generating logo upload URL for: ${filename}`);
+        
+        const result = await r2.getPresignedUploadUrl(key, contentType || 'image/png', 3600);
+        
+        if (!result.success) {
+            return res.status(500).json({ error: result.error || 'Failed to generate presigned URL' });
+        }
+        
+        res.json({
+            success: true,
+            uploadUrl: result.uploadUrl,
+            publicUrl: result.publicUrl,
+            key: result.key,
+            expiresIn: 3600
+        });
+        
+    } catch (error) {
+        console.error('[Upload] Logo presign error:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate presigned URL' });
+    }
+});
+
+/**
  * POST /api/upload/presign
  * Generate a presigned URL for direct browser-to-R2 upload
  * This bypasses the Cloudflare Tunnel limit (100MB)
