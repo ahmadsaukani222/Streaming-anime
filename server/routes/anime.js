@@ -208,24 +208,56 @@ router.get('/stream/:animeTitle/:episode', async (req, res) => {
 
         // 0. Check for Manual Streams in DB (Priority)
         try {
-            const dbAnime = await CustomAnime.findOne({
+            console.log(`[API/Stream] Looking for anime: "${animeTitle}" episode ${episodeNumber}`);
+            
+            // Try exact match first
+            let dbAnime = await CustomAnime.findOne({
                 title: { $regex: new RegExp(`^${animeTitle}$`, 'i') }
             });
+            
+            // If not found, try partial match
+            if (!dbAnime) {
+                console.log(`[API/Stream] Exact match not found, trying partial match...`);
+                dbAnime = await CustomAnime.findOne({
+                    title: { $regex: new RegExp(animeTitle, 'i') }
+                });
+            }
+            
+            // If still not found, try slug matching
+            if (!dbAnime) {
+                const slug = animeTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                console.log(`[API/Stream] Trying slug match: "${slug}"`);
+                dbAnime = await CustomAnime.findOne({
+                    id: { $regex: new RegExp(slug, 'i') }
+                });
+            }
 
-            if (dbAnime && dbAnime.episodeData) {
-                const epData = dbAnime.episodeData.find(e => e.ep === episodeNumber);
+            if (dbAnime) {
+                console.log(`[API/Stream] Found anime: "${dbAnime.title}" (ID: ${dbAnime.id})`);
+                
+                if (dbAnime.episodeData) {
+                    console.log(`[API/Stream] EpisodeData: ${dbAnime.episodeData.length} episodes`);
+                    const epData = dbAnime.episodeData.find(e => e.ep === episodeNumber);
 
-                if (epData && epData.streams && epData.streams.length > 0) {
-                    return res.json({
-                        success: true,
-                        streams: epData.streams,
-                        server: 'Custom Update',
-                        subtitle: epData.subtitle || null
-                    });
+                    if (epData && epData.streams && epData.streams.length > 0) {
+                        console.log(`[API/Stream] Found ${epData.streams.length} streams for episode ${episodeNumber}`);
+                        return res.json({
+                            success: true,
+                            streams: epData.streams,
+                            server: 'Custom Update',
+                            subtitle: epData.subtitle || null
+                        });
+                    } else {
+                        console.log(`[API/Stream] No streams found for episode ${episodeNumber}`);
+                    }
+                } else {
+                    console.log(`[API/Stream] Anime has no episodeData`);
                 }
+            } else {
+                console.log(`[API/Stream] Anime not found in DB: "${animeTitle}"`);
             }
         } catch (dbErr) {
-            console.error('[API] DB Stream Check Error:', dbErr);
+            console.error('[API/Stream] DB Stream Check Error:', dbErr);
         }
 
         // === SERVER 2: OTAKUDESU (with fallback to NontonAnimeID) ===
