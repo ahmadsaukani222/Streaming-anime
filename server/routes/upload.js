@@ -50,10 +50,18 @@ const upload = multer({
  */
 router.post('/logo', async (req, res) => {
     try {
-        console.log('[Upload] Logo request body:', req.body);
+        console.log('[Upload] Logo request received');
+        console.log('[Upload] Headers:', req.headers);
+        console.log('[Upload] Body:', req.body);
+        console.log('[Upload] Content-Type:', req.headers['content-type']);
         
-        const filename = req.body?.filename;
-        const contentType = req.body?.contentType;
+        // Pastikan body ada
+        if (!req.body) {
+            return res.status(400).json({ error: 'Request body is empty' });
+        }
+        
+        const filename = req.body.filename;
+        const contentType = req.body.contentType;
         
         if (!filename) {
             return res.status(400).json({ error: 'filename is required' });
