@@ -47,7 +47,7 @@ export default function Navbar() {
     if (storedName) setSiteName(storedName);
     if (storedLogo) setSiteLogo(storedLogo);
     
-    // Listen for storage changes (from admin panel)
+    // Listen for storage changes (from other tabs)
     const handleStorageChange = () => {
       const name = localStorage.getItem('siteName');
       const logo = localStorage.getItem('siteLogo');
@@ -55,8 +55,30 @@ export default function Navbar() {
       if (logo) setSiteLogo(logo);
     };
     
+    // Listen for custom event (from same tab)
+    const handleLogoUpdate = (e: CustomEvent) => {
+      setSiteLogo(e.detail);
+    };
+    
+    // Listen for BroadcastChannel messages
+    let bc: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('site-settings');
+      bc.onmessage = (event) => {
+        if (event.data.type === 'logoUpdated') {
+          setSiteLogo(event.data.logo);
+        }
+      };
+    }
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('siteLogoUpdated', handleLogoUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('siteLogoUpdated', handleLogoUpdate as EventListener);
+      bc?.close();
+    };
   }, []);
 
   useEffect(() => {

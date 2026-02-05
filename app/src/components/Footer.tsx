@@ -13,6 +13,29 @@ export default function Footer() {
     const storedLogo = localStorage.getItem('siteLogo');
     if (storedName) setSiteName(storedName);
     if (storedLogo) setSiteLogo(storedLogo);
+    
+    // Listen for custom event (from same tab)
+    const handleLogoUpdate = (e: CustomEvent) => {
+      setSiteLogo(e.detail);
+    };
+    
+    // Listen for BroadcastChannel messages
+    let bc: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('site-settings');
+      bc.onmessage = (event) => {
+        if (event.data.type === 'logoUpdated') {
+          setSiteLogo(event.data.logo);
+        }
+      };
+    }
+    
+    window.addEventListener('siteLogoUpdated', handleLogoUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('siteLogoUpdated', handleLogoUpdate as EventListener);
+      bc?.close();
+    };
   }, []);
 
   const footerLinks = {

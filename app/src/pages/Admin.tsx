@@ -120,6 +120,20 @@ export default function Admin() {
       
       // Set the logo URL
       setSiteLogo(publicUrl);
+      
+      // Save to localStorage immediately
+      localStorage.setItem('siteLogo', publicUrl);
+      
+      // Broadcast to all tabs/components
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('site-settings');
+        bc.postMessage({ type: 'logoUpdated', logo: publicUrl });
+        bc.close();
+      }
+      
+      // Dispatch custom event for same-tab updates
+      window.dispatchEvent(new CustomEvent('siteLogoUpdated', { detail: publicUrl }));
+      
       alert('Logo berhasil diupload!');
     } catch (error) {
       console.error('Logo upload error:', error);
