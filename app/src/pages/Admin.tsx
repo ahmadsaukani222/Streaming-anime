@@ -68,6 +68,71 @@ export default function Admin() {
   const [siteEmail, setSiteEmail] = useState(() => localStorage.getItem('siteEmail') || 'support@animeku.xyz');
   const [siteLogo, setSiteLogo] = useState(() => localStorage.getItem('siteLogo') || '');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  
+  // Logo Upload State
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState('');
+  
+  // Handle logo file upload
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      setLogoUploadError('File harus berupa gambar (PNG, JPG, GIF, WEBP)');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoUploadError('Ukuran file maksimal 2MB');
+      return;
+    }
+    
+    setLogoUploadError('');
+    setIsUploadingLogo(true);
+    
+    try {
+      // Generate key for logo
+      const timestamp = Date.now();
+      const key = `assets/logo/site-logo-${timestamp}.${file.name.split('.').pop()}`;
+      
+      // Get presigned URL from backend
+      const response = await apiFetch(`${BACKEND_URL}/api/upload/presign`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          animeTitle: 'site-assets',
+          episode: timestamp,
+          quality: 'logo',
+          contentType: file.type
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to get upload URL');
+      const { uploadUrl, publicUrl } = await response.json();
+      
+      // Upload to R2
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+      
+      if (!uploadResponse.ok) throw new Error('Upload failed');
+      
+      // Set the logo URL
+      setSiteLogo(publicUrl);
+      setLogoFile(null);
+      alert('Logo berhasil diupload!');
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      setLogoUploadError('Gagal upload logo. Coba lagi.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Ongoing' | 'Completed'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -2720,22 +2785,61 @@ export default function Admin() {
                 {/* Site Logo */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    Logo Website (URL)
+                    Logo Website
                   </label>
-                  <input
-                    type="text"
-                    value={siteLogo}
-                    onChange={(e) => setSiteLogo(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
-                    placeholder="https://example.com/logo.png"
-                  />
-                  <p className="text-xs text-white/40 mt-1">URL gambar logo (biarkan kosong untuk pakai default icon)</p>
+                  
+                  {/* File Upload */}
+                  <div className="mb-3">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-[#6C5DD3]/20 border border-[#6C5DD3]/50 rounded-lg cursor-pointer hover:bg-[#6C5DD3]/30 transition-colors w-fit">
+                      <CloudUpload className="w-4 h-4 text-[#6C5DD3]" />
+                      <span className="text-sm text-white">
+                        {isUploadingLogo ? 'Mengupload...' : 'Upload Logo'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoUpload(file);
+                        }}
+                        disabled={isUploadingLogo}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-xs text-white/40 mt-1">Upload gambar logo (PNG, JPG, WEBP). Maks 2MB.</p>
+                  </div>
+                  
+                  {logoUploadError && (
+                    <p className="text-xs text-red-400 mb-2">{logoUploadError}</p>
+                  )}
+                  
+                  {/* URL Input (fallback) */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-white/30 text-sm">URL:</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={siteLogo}
+                      onChange={(e) => setSiteLogo(e.target.value)}
+                      className="w-full pl-14 pr-4 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
+                      placeholder="https://example.com/logo.png"
+                    />
+                  </div>
+                  
+                  {/* Preview */}
                   {siteLogo && (
-                    <div className="mt-3 flex items-center gap-3">
+                    <div className="mt-3 flex items-center gap-3 p-3 bg-white/5 rounded-xl">
                       <span className="text-xs text-white/40">Preview:</span>
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center overflow-hidden">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center overflow-hidden">
                         <img src={siteLogo} alt="Preview" className="w-full h-full object-cover" />
                       </div>
+                      <button
+                        onClick={() => setSiteLogo('')}
+                        className="ml-auto text-xs text-red-400 hover:text-red-300"
+                      >
+                        Hapus
+                      </button>
                     </div>
                   )}
                 </div>
