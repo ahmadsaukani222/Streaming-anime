@@ -50,7 +50,10 @@ const upload = multer({
  */
 router.post('/logo', async (req, res) => {
     try {
-        const { filename, contentType } = req.body;
+        console.log('[Upload] Logo request body:', req.body);
+        
+        const filename = req.body?.filename;
+        const contentType = req.body?.contentType;
         
         if (!filename) {
             return res.status(400).json({ error: 'filename is required' });
