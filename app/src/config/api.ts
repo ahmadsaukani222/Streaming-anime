@@ -10,6 +10,12 @@ const resolveBackendUrl = () => {
         if (hostname.startsWith('test.')) {
             return `${protocol}//backend.${hostname.slice(5)}`;
         }
+        if (hostname === 'animeku.xyz' || hostname === 'www.animeku.xyz') {
+            return `${protocol}//api.animeku.xyz`;
+        }
+        if (hostname.endsWith('.animeku.xyz') && !hostname.startsWith('api.')) {
+            return `${protocol}//api.animeku.xyz`;
+        }
         return `${protocol}//${hostname}`;
     }
 

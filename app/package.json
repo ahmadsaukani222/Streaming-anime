@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "prerender": "node scripts/prerender.mjs",
+    "build": "npm run sitemap && tsc -b && vite build && npm run prerender",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && npm run deploy:r2",
+    "deploy:r2": "aws s3 sync dist/ s3://animeku --endpoint-url=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com --delete",
+    "deploy:win": "npm run build && aws s3 sync dist/ s3://animeku --endpoint-url=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com --delete"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -61,6 +66,8 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@prerenderer/prerenderer": "^1.2.5",
+    "@prerenderer/renderer-puppeteer": "^1.2.4",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
