@@ -107,12 +107,14 @@ export function useApi<T, Args extends unknown[] = unknown[]>(
 ) {
   const { immediate = false, ...asyncOptions } = options;
   const asyncState = useAsync(apiFunction, asyncOptions);
+  const hasExecuted = useRef(false);
 
   useEffect(() => {
-    if (immediate) {
+    if (immediate && !hasExecuted.current) {
+      hasExecuted.current = true;
       asyncState.execute(...([] as unknown as Args));
     }
-  }, []);
+  }, [immediate, asyncState.execute]);
 
   return asyncState;
 }

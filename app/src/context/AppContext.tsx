@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Anime } from '@/data/animeData';
-import { BACKEND_URL } from '../config/api';
+import { BACKEND_URL } from '@/config/api';
 import { getAuthHeaders, saveAuthToken } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { COMMUNITY_ROLES, getRoleConfig } from '@/config/roles';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AppContext');
 
 interface User {
   id: string;
@@ -169,7 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } as User;
       }
     } catch (e) {
-      console.error('[AppContext] Error reading stored user:', e);
+      logger.error('[AppContext] Error reading stored user:', e);
     }
     return null;
   };
@@ -185,14 +188,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('user');
       }
     } catch (e) {
-      console.error('[AppContext] Error saving user:', e);
+      logger.error('[AppContext] Error saving user:', e);
       // Try sessionStorage as fallback
       try {
         if (userData) {
           sessionStorage.setItem('user', JSON.stringify(userData));
         }
       } catch (e2) {
-        console.error('[AppContext] SessionStorage fallback also failed:', e2);
+        logger.error('[AppContext] SessionStorage fallback also failed:', e2);
       }
     }
   };
@@ -229,7 +232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         setAnimeList(filteredAnime);
       } catch (error) {
-        console.error('Failed to fetch anime:', error);
+        logger.error('Failed to fetch anime:', error);
         setAnimeList([]);
       } finally {
         setIsLoading(false);
@@ -306,7 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBadgeMap(nextMap);
       }
     } catch (err) {
-      console.warn('[AppContext] Failed to fetch badges');
+      logger.warn('[AppContext] Failed to fetch badges');
     }
   }, []);
 
@@ -348,7 +351,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fetchUserData(data._id || data.id);
       return true;
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       return false;
     }
   }, []);
@@ -380,7 +383,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveUser(mappedUser);
       return true;
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       return false;
     }
   }, []);
@@ -437,7 +440,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true };
     } catch (err) {
-      console.error('Update profile error:', err);
+      logger.error('Update profile error:', err);
       return { success: false, error: 'Network error' };
     }
   }, [user]);
@@ -472,7 +475,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true, avatarUrl: data.avatarUrl };
     } catch (err) {
-      console.error('Update avatar error:', err);
+      logger.error('Update avatar error:', err);
       return { success: false, error: 'Network error' };
     }
   }, [user]);
@@ -492,7 +495,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setNotifications(mapped);
       }
     } catch (err) {
-      console.error('Failed to fetch notifications', err);
+      logger.error('Failed to fetch notifications', err);
     }
   };
 
@@ -517,7 +520,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await fetchNotifications();
       }
     } catch (err) {
-      console.error('Failed to sync user data', err);
+      logger.error('Failed to sync user data', err);
     }
   };
 
@@ -547,7 +550,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setAnimeList(prev => [newAnime as Anime, ...prev]);
     } catch (err) {
-      console.error('Failed to add anime', err);
+      logger.error('Failed to add anime', err);
     }
   }, []);
 
@@ -562,7 +565,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(updates),
       });
     } catch (err) {
-      console.error('Failed to update anime', err);
+      logger.error('Failed to update anime', err);
       // Optional: Revert state here if critical
     }
   }, []);
@@ -577,7 +580,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAnimeList(prev => prev.filter(a => a.id !== id));
       // Deleted anime is already tracked in database via DeletedAnime model
     } catch (err) {
-      console.error('Failed to delete anime', err);
+      logger.error('Failed to delete anime', err);
     }
   }, []);
 
@@ -597,7 +600,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, animeId }),
       });
     } catch (err) {
-      console.error('Sync failed', err);
+      logger.error('Sync failed', err);
       // Revert if failed (omitted for brevity)
     }
   }, [user]);
@@ -619,7 +622,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, animeId }),
       });
     } catch (err) {
-      console.error('Watchlist sync failed', err);
+      logger.error('Watchlist sync failed', err);
     }
   }, [user]);
 
@@ -646,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({ userId: user.id, animeId, episodeId, episodeNumber, progress }),
         });
-      } catch (err) { console.error(err); }
+      } catch (err) { logger.error(err); }
     }
   }, [user]);
 
@@ -687,7 +690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, animeId, rating }),
       });
     } catch (err) {
-      console.error('Failed to save rating', err);
+      logger.error('Failed to save rating', err);
     }
   }, [user]);
 
@@ -702,7 +705,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiFetch(`${BACKEND_URL}/api/user/rating/${user.id}/${animeId}`, { method: 'DELETE', headers: { ...getAuthHeaders() } });
     } catch (err) {
-      console.error('Failed to delete rating', err);
+      logger.error('Failed to delete rating', err);
     }
   }, [user]);
 
@@ -731,7 +734,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, animeId, episodeNumber }),
       });
     } catch (err) {
-      console.error('Failed to toggle watched episode', err);
+      logger.error('Failed to toggle watched episode', err);
     }
   }, [user]);
 
@@ -755,7 +758,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, animeId }),
       });
     } catch (err) {
-      console.error('Failed to toggle subscription', err);
+      logger.error('Failed to toggle subscription', err);
     }
   }, [user]);
 
@@ -773,7 +776,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { ...getAuthHeaders() }
       });
     } catch (err) {
-      console.error('Failed to mark notification read', err);
+      logger.error('Failed to mark notification read', err);
     }
   }, [user]);
 
@@ -788,7 +791,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { ...getAuthHeaders() }
       });
     } catch (err) {
-      console.error('Failed to mark all notifications read', err);
+      logger.error('Failed to mark all notifications read', err);
     }
   }, [user]);
 
@@ -807,7 +810,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ userId: user.id, settings: newSettings }),
       });
     } catch (err) {
-      console.error('Failed to update settings', err);
+      logger.error('Failed to update settings', err);
     }
   }, [user]);
 
@@ -819,7 +822,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiFetch(`${BACKEND_URL}/api/user/history/${user.id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } });
     } catch (err) {
-      console.error('Failed to delete history', err);
+      logger.error('Failed to delete history', err);
     }
   }, [user]);
 

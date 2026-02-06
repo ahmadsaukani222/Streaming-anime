@@ -6,6 +6,9 @@ import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { apiFetch } from '@/lib/api';
 import OptimizedImage from './OptimizedImage';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('Hero');
 
 export default function Hero() {
   const { animeList } = useApp();
@@ -24,26 +27,26 @@ export default function Hero() {
       try {
         const res = await apiFetch(`${BACKEND_URL}/api/settings/heroAnimeIds`);
         if (!res.ok) {
-          console.warn('[Hero] Settings fetch failed:', res.status, res.statusText);
+          logger.warn('[Hero] Settings fetch failed:', res.status, res.statusText);
           return;
         }
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
-          console.warn('[Hero] Settings response not JSON:', contentType);
+          logger.warn('[Hero] Settings response not JSON:', contentType);
           return;
         }
         let data: unknown;
         try {
           data = await res.json();
         } catch {
-          console.warn('[Hero] Settings JSON parse failed');
+          logger.warn('[Hero] Settings JSON parse failed');
           return;
         }
         if (Array.isArray(data) && data.length > 0) {
           setHeroAnimeIds(data);
         }
       } catch (err) {
-        console.error('Failed to load hero settings:', err);
+        logger.error('Failed to load hero settings:', err);
       }
     };
     loadHeroSettings();

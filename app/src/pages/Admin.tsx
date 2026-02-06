@@ -37,10 +37,13 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
-import { API_CONFIG, getApiUrl, BACKEND_URL } from '../config/api';
+import { API_CONFIG, getApiUrl, BACKEND_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
-import { DEFAULT_SITE_NAME } from '../config/api';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('Admin');
+import { DEFAULT_SITE_NAME } from '@/config/api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -141,7 +144,7 @@ export default function Admin() {
         variant: 'success',
       });
     } catch (error) {
-      console.error('Logo upload error:', error);
+      logger.error('Logo upload error:', error);
       setLogoUploadError('Gagal upload logo. Coba lagi.');
     } finally {
       setIsUploadingLogo(false);
@@ -242,7 +245,7 @@ export default function Admin() {
           }
         } else if (res.status === 404) {
           // First time - save default widgets to database
-          console.log('[Admin] No saved widgets found, saving defaults to DB...');
+          logger.log('[Admin] No saved widgets found, saving defaults to DB...');
           await apiFetch(`${BACKEND_URL}/api/settings/sidebarWidgets`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -250,7 +253,7 @@ export default function Admin() {
           });
         }
       } catch (err) {
-        console.warn('Failed to load sidebar widgets from DB, using defaults');
+        logger.warn('Failed to load sidebar widgets from DB, using defaults');
       } finally {
         setIsLoadingWidgets(false);
       }
@@ -268,7 +271,7 @@ export default function Admin() {
         body: JSON.stringify({ value: widgets }),
       });
     } catch (err) {
-      console.error('Failed to save sidebar widgets to DB:', err);
+      logger.error('Failed to save sidebar widgets to DB:', err);
       showToast('Gagal menyimpan ke database!', 'error');
     }
   };
@@ -328,7 +331,7 @@ export default function Admin() {
           });
         }
       } catch (err) {
-        console.warn('Failed to load home sections, using defaults');
+        logger.warn('Failed to load home sections, using defaults');
       } finally {
         setIsLoadingHomeSections(false);
       }
@@ -346,7 +349,7 @@ export default function Admin() {
         body: JSON.stringify({ value: sections }),
       });
     } catch (err) {
-      console.error('Failed to save home sections to DB:', err);
+      logger.error('Failed to save home sections to DB:', err);
       showToast('Gagal menyimpan home sections!', 'error');
     }
   };
@@ -373,7 +376,7 @@ export default function Admin() {
           }
         }
       } catch (err) {
-        console.error('Failed to load hero settings:', err);
+        logger.error('Failed to load hero settings:', err);
       }
     };
     loadHeroSettings();
@@ -390,7 +393,7 @@ export default function Admin() {
       });
       showToast('Hero settings saved!', 'success');
     } catch (err) {
-      console.error('Failed to save hero settings:', err);
+      logger.error('Failed to save hero settings:', err);
       showToast('Gagal menyimpan hero settings!', 'error');
     }
   };
@@ -850,8 +853,8 @@ export default function Admin() {
     // Construct full anime update object
     const updatedAnime = { ...selectedAnimeForEpisodes, episodeData: updatedEpisodes };
 
-    console.log('[Admin] Saving episode data:', episodeToEdit);
-    console.log('[Admin] Updated episodes array:', updatedEpisodes);
+    logger.log('[Admin] Saving episode data:', episodeToEdit);
+    logger.log('[Admin] Updated episodes array:', updatedEpisodes);
 
     // Call context update - this calls PUT /api/anime/:id
     await updateAnime(updatedAnime.id, { episodeData: updatedEpisodes });
@@ -934,7 +937,7 @@ export default function Admin() {
         showToast(`Gagal: ${data.error || 'Unknown error'}`, 'error');
       }
     } catch (err) {
-      console.error('Scrape error:', err);
+      logger.error('Scrape error:', err);
       showToast('Gagal scrape episode. Periksa console untuk detail.', 'error');
     } finally {
       setIsScraping(false);
@@ -944,11 +947,11 @@ export default function Admin() {
 
   // Generate subtitle for an episode using AI
   const handleGenerateSubtitle = async (episodeNum: number) => {
-    console.log('[Subtitle] handleGenerateSubtitle called for episode:', episodeNum);
-    console.log('[Subtitle] selectedAnimeForEpisodes:', selectedAnimeForEpisodes);
+    logger.log('[Subtitle] handleGenerateSubtitle called for episode:', episodeNum);
+    logger.log('[Subtitle] selectedAnimeForEpisodes:', selectedAnimeForEpisodes);
 
     if (!selectedAnimeForEpisodes) {
-      console.error('[Subtitle] No anime selected!');
+      logger.error('[Subtitle] No anime selected!');
       showToast('Pilih anime terlebih dahulu', 'error');
       return;
     }
@@ -958,7 +961,7 @@ export default function Admin() {
     setSubtitleProgress('Memulai proses...');
 
     try {
-      console.log('[Subtitle] Calling API...');
+      logger.log('[Subtitle] Calling API...');
 
       // Show progress stages
       setSubtitleProgress('⏳ Mengekstrak audio dari video...');
@@ -996,7 +999,7 @@ export default function Admin() {
         showToast(`Gagal: ${data.error}`, 'error');
       }
     } catch (err: any) {
-      console.error('Subtitle generation error:', err);
+      logger.error('Subtitle generation error:', err);
       showToast(`Error: ${err.message || 'Gagal generate subtitle'}`, 'error');
     } finally {
       setIsGeneratingSubtitle(false);
@@ -1038,7 +1041,7 @@ export default function Admin() {
         showToast(`Gagal: ${data.error}`, 'error');
       }
     } catch (err: any) {
-      console.error('Delete subtitle error:', err);
+      logger.error('Delete subtitle error:', err);
       showToast(`Error: ${err.message || 'Gagal hapus subtitle'}`, 'error');
     }
   };
@@ -1290,29 +1293,29 @@ export default function Admin() {
                             if (!query) return;
 
                             try {
-                              console.log('[Admin] Searching for:', query);
+                              logger.log('[Admin] Searching for:', query);
                               const url = `${getApiUrl(API_CONFIG.endpoints.search)}?q=${query}`;
-                              console.log('[Admin] Search URL:', url);
+                              logger.log('[Admin] Search URL:', url);
 
                               const res = await fetch(url);
-                              console.log('[Admin] Response status:', res.status);
+                              logger.log('[Admin] Response status:', res.status);
 
                               const data = await res.json();
-                              console.log('[Admin] Raw API response:', data);
+                              logger.log('[Admin] Raw API response:', data);
 
                               // DramaBos format: { code: 0, data: [...] }
                               const results = data?.data || [];
-                              console.log('[Admin] Extracted results:', results);
+                              logger.log('[Admin] Extracted results:', results);
 
                               if (Array.isArray(results)) {
                                 setApiSearchResults(results);
-                                console.log('[Admin] Set results, count:', results.length);
+                                logger.log('[Admin] Set results, count:', results.length);
                               } else {
-                                console.warn('[Admin] Results not an array:', results);
+                                logger.warn('[Admin] Results not an array:', results);
                                 setApiSearchResults([]);
                               }
                             } catch (err) {
-                              console.error('[Admin] Search error:', err);
+                              logger.error('[Admin] Search error:', err);
                               setApiSearchResults([]);
                             }
                           }
@@ -1351,9 +1354,9 @@ export default function Admin() {
                               }
 
 
-                              console.log('[Admin] Selected item:', item);
+                              logger.log('[Admin] Selected item:', item);
                               const slug = item.slug || item.url || '';
-                              console.log('[Admin] Fetching detail for slug:', slug);
+                              logger.log('[Admin] Fetching detail for slug:', slug);
 
                               // Fetch anime detail to get episode data and metadata
                               let episodeData: any[] = [];
@@ -1366,12 +1369,12 @@ export default function Admin() {
                                 const detailRes = await fetch(`${getApiUrl(API_CONFIG.endpoints.detail)}/${slug}`);
                                 const detailData = await detailRes.json();
 
-                                console.log('[Admin] Detail API response:', detailData);
+                                logger.log('[Admin] Detail API response:', detailData);
 
                                 // DramaBos format: { code: 0, data: { episodes: [...], studio, rating, ... } }
                                 const detail = detailData.data || {};
                                 const episodes = detail.episodes || [];
-                                console.log('[Admin] Episodes from detail:', episodes);
+                                logger.log('[Admin] Episodes from detail:', episodes);
 
                                 episodeData = episodes.map((ep: any, idx: number) => ({
                                   episodeNumber: parseInt(ep.ep) || idx + 1,
@@ -1390,37 +1393,37 @@ export default function Admin() {
                                 if (detail.synopsis) detailSynopsis = detail.synopsis;
                                 if (detail.genres && Array.isArray(detail.genres)) detailGenres = detail.genres;
 
-                                console.log('[Admin] Extracted episodeData:', episodeData);
-                                console.log('[Admin] Studio:', detailStudio, 'Rating:', detailRating);
+                                logger.log('[Admin] Extracted episodeData:', episodeData);
+                                logger.log('[Admin] Studio:', detailStudio, 'Rating:', detailRating);
                               } catch (error) {
-                                console.error('[Admin] Failed to fetch detail:', error);
+                                logger.error('[Admin] Failed to fetch detail:', error);
                                 // Continue without episode data
                               }
 
                               // Auto-translate synopsis to Indonesian
                               let translatedSynopsis = detailSynopsis;
-                              console.log('[Admin] Original synopsis:', detailSynopsis?.substring(0, 100));
+                              logger.log('[Admin] Original synopsis:', detailSynopsis?.substring(0, 100));
 
                               if (detailSynopsis && detailSynopsis.trim()) {
                                 try {
-                                  console.log('[Admin] Translating synopsis to Indonesian...');
+                                  logger.log('[Admin] Translating synopsis to Indonesian...');
                                   const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ text: detailSynopsis, targetLang: 'id' })
                                   });
-                                  console.log('[Admin] Translate response status:', translateRes.status);
+                                  logger.log('[Admin] Translate response status:', translateRes.status);
                                   const translateData = await translateRes.json();
-                                  console.log('[Admin] Translate response:', translateData);
+                                  logger.log('[Admin] Translate response:', translateData);
                                   if (translateData.translated) {
                                     translatedSynopsis = translateData.translated;
-                                    console.log('[Admin] Synopsis translated successfully:', translatedSynopsis?.substring(0, 100));
+                                    logger.log('[Admin] Synopsis translated successfully:', translatedSynopsis?.substring(0, 100));
                                   }
                                 } catch (translateError) {
-                                  console.error('[Admin] Translation failed, using original:', translateError);
+                                  logger.error('[Admin] Translation failed, using original:', translateError);
                                 }
                               } else {
-                                console.log('[Admin] No synopsis to translate');
+                                logger.log('[Admin] No synopsis to translate');
                               }
 
                               setFormData(prev => ({
@@ -1936,7 +1939,7 @@ export default function Admin() {
                         const data = await res.json();
                         setApiSearchResults(data.data || []);
                       } catch (err) {
-                        console.error('Jikan Error:', err);
+                        logger.error('Jikan Error:', err);
                       }
                     }
                   }}
@@ -1978,7 +1981,7 @@ export default function Admin() {
                               if (match) tmdbId = parseInt(match[1]);
                             }
                           } catch (e) {
-                            console.warn('Failed to fetch TMDB ID:', e);
+                            logger.warn('Failed to fetch TMDB ID:', e);
                           }
 
                           // Map Jikan type to our type enum
@@ -1996,7 +1999,7 @@ export default function Admin() {
                           let translatedSynopsis = anime.synopsis || '';
                           if (anime.synopsis && anime.synopsis.trim()) {
                             try {
-                              console.log('[Admin/Jikan] Translating synopsis to Indonesian...');
+                              logger.log('[Admin/Jikan] Translating synopsis to Indonesian...');
                               const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -2005,10 +2008,10 @@ export default function Admin() {
                               const translateData = await translateRes.json();
                               if (translateData.translated) {
                                 translatedSynopsis = translateData.translated;
-                                console.log('[Admin/Jikan] Synopsis translated successfully');
+                                logger.log('[Admin/Jikan] Synopsis translated successfully');
                               }
                             } catch (translateError) {
-                              console.error('[Admin/Jikan] Translation failed:', translateError);
+                              logger.error('[Admin/Jikan] Translation failed:', translateError);
                             }
                           }
 
