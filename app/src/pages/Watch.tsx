@@ -22,13 +22,16 @@ import {
   Camera,
   Repeat,
   FastForward,
-  Film
+  Film,
+  Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import AnimeCard from '@/components/AnimeCard';
 import CommentSection from '@/components/CommentSection';
+import WatchPartyRoom from '@/components/WatchPartyRoom';
+import WatchPartyLobby from '@/components/WatchPartyLobby';
 import { apiFetch } from '@/lib/api';
 import { WatchSEO } from '@/components/Seo';
 import { VideoSchema, BreadcrumbSchema } from '@/components/SchemaOrg';
@@ -67,7 +70,7 @@ export default function Watch() {
   const episode = params.episode;
   const navigate = useNavigate();
   const { animeList, updateWatchProgress, user } = useApp();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [isEmbed, setIsEmbed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -120,6 +123,10 @@ export default function Watch() {
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
   const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+
+  // Watch Party State
+  const [showWatchParty, setShowWatchParty] = useState(false);
+  const [watchPartyRoomId, setWatchPartyRoomId] = useState<string | undefined>();
 
   useEffect(() => {
     // Scroll to top
@@ -834,6 +841,13 @@ export default function Watch() {
                         <span className="text-white/50 text-sm">EP {currentEpisode}</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setShowWatchParty(true)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-[#6C5DD3]/80 hover:bg-[#6C5DD3] text-white rounded-lg text-sm transition-colors"
+                        >
+                          <Users className="w-4 h-4" />
+                          <span className="hidden sm:inline">Watch Party</span>
+                        </button>
                         <button className="p-2 text-white/70 hover:text-white transition-colors">
                           <Flag className="w-4 h-4" />
                         </button>
@@ -1178,6 +1192,35 @@ export default function Watch() {
           </div>
         </div>
       </section>
+
+      {/* Watch Party Room */}
+      {showWatchParty && anime && (
+        <WatchPartyRoom
+          roomId={watchPartyRoomId}
+          animeId={anime.id}
+          episodeId={`${anime.id}-ep-${currentEpisode}`}
+          animeTitle={anime.title}
+          episodeNumber={currentEpisode}
+          isHost={!watchPartyRoomId}
+          onClose={() => {
+            setShowWatchParty(false);
+            setWatchPartyRoomId(undefined);
+          }}
+          videoRef={videoRef}
+        />
+      )}
+
+      {/* Watch Party Lobby */}
+      {showWatchParty && !anime && (
+        <WatchPartyLobby
+          onJoinRoom={(roomId) => {
+            setWatchPartyRoomId(roomId);
+          }}
+          onCreateRoom={() => {
+            navigate('/');
+          }}
+        />
+      )}
     </main>
     </>
   );

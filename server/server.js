@@ -3,11 +3,29 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
+const http = require('http');
+const { Server } = require('socket.io');
 const User = require('./models/User');
+const { initializeWatchPartySocket } = require('./socket/watchParty');
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'https://test.aavpanel.my.id',
+            'https://aavpanel.my.id',
+            'https://animeku.xyz',
+            'https://www.animeku.xyz'
+        ],
+        credentials: true,
+        methods: ['GET', 'POST']
+    }
+});
 const PORT = process.env.PORT || 5000;
 const REFRESH_TOKEN_CLEANUP_MINUTES = parseInt(process.env.REFRESH_TOKEN_CLEANUP_MINUTES || '60', 10);
 
@@ -90,6 +108,7 @@ app.use('/api/notifications', require('./routes/notification'));
 app.use('/api/schedule-subscriptions', require('./routes/scheduleSubscription'));
 app.use('/api/reviews', require('./routes/review'));
 app.use('/api/badges', require('./routes/badge'));
+app.use('/api/watchparty', require('./routes/watchParty'));
 
 app.get('/', (req, res) => {
     // Check if request is from browser (wants HTML)
@@ -127,7 +146,10 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[Unhandled Rejection] at:', promise, 'reason:', reason);
 });
 
-app.listen(PORT, () => {
+// Initialize Socket.io handlers
+initializeWatchPartySocket(io);
+
+server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
 
