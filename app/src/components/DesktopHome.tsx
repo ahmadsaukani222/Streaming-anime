@@ -63,9 +63,14 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
             </div>
           </div>
 
-          {/* Status badge */}
-          <div className="absolute top-2.5 left-2.5">
+          {/* Status & Type badges */}
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
             <StatusBadge status={anime.status} variant="solid" />
+            {anime.type && (
+              <span className="px-1.5 py-0.5 bg-[#6C5DD3]/90 text-white text-[9px] font-bold rounded">
+                {anime.type}
+              </span>
+            )}
           </div>
 
           {/* Rating */}
@@ -89,12 +94,12 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-          className={`absolute top-0 ${tooltipPosition === 'right' ? 'left-full ml-4' : 'right-full mr-4'} z-50 w-[360px]`}
+          className={`absolute top-0 ${tooltipPosition === 'right' ? 'left-full ml-3' : 'right-full mr-3'} z-50 w-[320px]`}
           style={{ pointerEvents: 'none' }}
         >
           <div className="bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
             {/* Banner Image */}
-            <div className="relative h-32 overflow-hidden">
+            <div className="relative h-24 overflow-hidden">
               <img 
                 src={anime.banner || anime.poster} 
                 alt="" 
@@ -116,56 +121,51 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
             </div>
 
             {/* Content */}
-            <div className="p-5">
+            <div className="p-4">
               {/* Title Section */}
-              <div className="mb-4">
-                <h4 className="text-lg font-bold text-white leading-tight mb-1">
+              <div className="mb-3">
+                <h4 className="text-base font-bold text-white leading-tight mb-0.5">
                   {anime.title}
                 </h4>
                 {anime.titleJp && (
-                  <p className="text-sm text-white/40">{anime.titleJp}</p>
+                  <p className="text-xs text-white/40">{anime.titleJp}</p>
                 )}
               </div>
 
               {/* Meta Info Row */}
-              <div className="flex items-center gap-4 mb-4 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+              <div className="flex items-center gap-3 mb-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
                   <span className="font-semibold text-white">{anime.rating}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-white/60">
-                  <Calendar className="w-4 h-4" />
+                <div className="flex items-center gap-1 text-white/60">
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>{anime.releasedYear}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-white/60">
-                  <Clock className="w-4 h-4" />
+                <div className="flex items-center gap-1 text-white/60">
+                  <Clock className="w-3.5 h-3.5" />
                   <span>{anime.episodes} EP</span>
                 </div>
               </div>
 
               {/* Studio & Type */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
-                  {anime.studio}
-                </span>
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 {anime.type && (
-                  <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
+                  <span className="px-2 py-0.5 rounded-md bg-[#6C5DD3]/20 text-[#B7ABFF] text-[10px] font-medium border border-[#6C5DD3]/30">
                     {anime.type}
                   </span>
                 )}
-                {anime.duration && (
-                  <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
-                    {anime.duration}
-                  </span>
-                )}
+                <span className="px-2 py-0.5 rounded-md bg-white/5 text-white/60 text-[10px]">
+                  {anime.studio}
+                </span>
               </div>
 
               {/* Genres */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {anime.genres.slice(0, 5).map((genre) => (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {anime.genres.slice(0, 4).map((genre) => (
                   <span 
                     key={genre} 
-                    className="px-2.5 py-1 rounded-md bg-[#6C5DD3]/10 text-[#B7ABFF] text-xs font-medium border border-[#6C5DD3]/20"
+                    className="px-2 py-0.5 rounded bg-[#6C5DD3]/10 text-[#B7ABFF] text-[10px] font-medium border border-[#6C5DD3]/20"
                   >
                     {genre}
                   </span>
@@ -173,17 +173,17 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
               </div>
 
               {/* Synopsis */}
-              <p className="text-sm text-white/60 line-clamp-4 mb-5 leading-relaxed">
+              <p className="text-xs text-white/60 line-clamp-3 mb-4 leading-relaxed">
                 {anime.synopsis}
               </p>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3">
-                <span className="flex-1 text-center py-2.5 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#6C5DD3]/20">
+              <div className="flex items-center gap-2">
+                <span className="flex-1 text-center py-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white text-xs font-semibold rounded-lg transition-colors shadow-lg shadow-[#6C5DD3]/20">
                   Tonton Sekarang
                 </span>
-                <span className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
-                  <Bookmark className="w-5 h-5" />
+                <span className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
+                  <Bookmark className="w-4 h-4" />
                 </span>
               </div>
             </div>
