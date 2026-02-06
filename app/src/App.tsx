@@ -32,9 +32,16 @@ import Donate from '@/pages/Donate';
 import NotFound from '@/pages/NotFound';
 import { WebsiteSchema } from '@/components/SchemaOrg';
 
-// Lenis Smooth Scroll Component
+// Lenis Smooth Scroll Component (disabled on mobile for better performance)
 function SmoothScroll({ children }: { children: React.ReactNode }) {
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
+
   useEffect(() => {
+    // Skip Lenis on mobile devices for better performance
+    if (isMobile) {
+      return;
+    }
+
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -61,7 +68,7 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
       delete (window as any).__lenis;
       lenis.destroy();
     };
-  }, []);
+  }, [isMobile]);
 
   return <>{children}</>;
 }
