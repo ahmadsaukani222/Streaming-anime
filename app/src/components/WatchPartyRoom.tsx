@@ -259,38 +259,38 @@ export default function WatchPartyRoom({
       {/* Main Content - Video Area */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0F0F1A] shrink-0">
-          <div className="flex items-center gap-4">
-            <div>
-              <h2 className="text-white font-semibold">{roomData.animeTitle}</h2>
-              <p className="text-white/50 text-sm">Episode {roomData.episodeNumber}</p>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10 bg-[#0F0F1A] shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="min-w-0">
+              <h2 className="text-white font-semibold text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{roomData.animeTitle}</h2>
+              <p className="text-white/50 text-xs sm:text-sm">EP {roomData.episodeNumber}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Room Code */}
             <button
               onClick={copyRoomCode}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
             >
-              <span className="text-white/60 text-sm">Room:</span>
-              <span className="text-[#6C5DD3] font-mono font-medium">{roomData.roomId}</span>
-              <Copy className="w-4 h-4 text-white/40" />
+              <span className="text-white/60 text-xs sm:text-sm hidden sm:inline">Room:</span>
+              <span className="text-[#6C5DD3] font-mono font-medium text-xs sm:text-sm">{roomData.roomId}</span>
+              <Copy className="w-3 h-3 sm:w-4 sm:h-4 text-white/40" />
             </button>
 
             {/* Ready Status */}
             <button
               onClick={toggleReady}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors ${
                 participants.find(p => p.userId === currentUserId)?.isReady
                   ? 'bg-green-500/20 text-green-400'
                   : 'bg-white/5 text-white/60 hover:bg-white/10'
               }`}
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="text-sm">{readyCount}/{totalCount} Ready</span>
+              <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">{readyCount}/{totalCount}</span>
               {isHost && readyCount === totalCount && totalCount > 0 && (
-                <span className="text-xs text-green-400 ml-1">Everyone ready!</span>
+                <span className="text-xs text-green-400 ml-1 hidden sm:inline">Ready!</span>
               )}
             </button>
 
@@ -378,11 +378,177 @@ export default function WatchPartyRoom({
 
       {/* Sidebar - Chat & Participants */}
       <AnimatePresence>
+        {/* Mobile Backdrop */}
+        {showParticipants && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowParticipants(false)}
+            className="lg:hidden fixed inset-0 bg-black/60 z-40"
+          />
+        )}
+
+        {/* Mobile: Bottom Sheet */}
+        <motion.div
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          className={`${showParticipants ? 'flex' : 'hidden'} lg:hidden fixed inset-x-0 bottom-0 h-[70vh] bg-[#1A1A2E] border-t border-white/10 flex-col rounded-t-2xl z-50`}
+        >
+          {/* Drag Handle */}
+          <div 
+            className="w-full flex justify-center pt-3 pb-2 cursor-pointer"
+            onClick={() => setShowParticipants(false)}
+          >
+            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex border-b border-white/10">
+            <button
+              onClick={() => setShowParticipants(false)}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${!showParticipants ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Chat
+              </div>
+            </button>
+            <button
+              onClick={() => setShowParticipants(true)}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${showParticipants ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Users className="w-4 h-4" />
+                Participants
+              </div>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-hidden">
+
+            {showParticipants ? (
+              <div className="p-4 space-y-3">
+
+                {participants.map((participant) => (
+                  <div
+                    key={participant.userId}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-white/5"
+                  >
+                    <SafeAvatar
+                      src={participant.avatar}
+                      name={participant.name}
+                      className="w-10 h-10"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-medium truncate">
+                          {participant.name}
+                        </span>
+                        {participant.isHost === true && (
+                          <Crown className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {participant.isReady ? (
+                          <span className="text-xs text-green-400">Ready</span>
+                        ) : (
+                          <span className="text-xs text-white/40">Not ready</span>
+                        )}
+                      </div>
+                    </div>
+                    {isHost && !participant.isHost && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => transferHost(participant.userId)}
+                          className="text-xs text-[#6C5DD3] hover:text-white"
+                        >
+                          Make Host
+                        </button>
+                        <button
+                          onClick={() => kickParticipant(participant.userId)}
+                          className="text-xs text-red-400 hover:text-red-300"
+                        >
+                          Kick
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {messages.map((msg, index) => (
+                    <div
+                      key={index}
+                      className={`flex flex-col ${msg.userId === 'system' ? 'items-center' : 'items-start'}`}
+                    >
+                      {msg.userId !== 'system' && (
+                        <span className="text-xs text-white/40 mb-1">{msg.name}</span>
+                      )}
+                      <div className={`rounded-lg px-3 py-2 max-w-[90%] ${
+                        msg.userId === 'system' 
+                          ? 'bg-transparent' 
+                          : 'bg-white/10'
+                      }`}>
+                        <p className={`text-sm ${
+                          msg.userId === 'system' 
+                            ? 'text-2xl' 
+                            : 'text-white'
+                        }`}>{msg.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
+                  {/* Emoji Picker */}
+                  <div className="flex justify-center gap-2 mb-3">
+                    {reactions.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => sendReaction(emoji)}
+                        className="text-xl hover:scale-125 transition-transform"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#6C5DD3]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!messageInput.trim()}
+                      className="p-2 bg-[#6C5DD3] rounded-lg hover:bg-[#5B4EC2] disabled:opacity-50 transition-colors"
+                    >
+                      <Send className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Desktop: Side Panel */}
         <motion.div
           initial={{ x: 320 }}
           animate={{ x: 0 }}
           exit={{ x: 320 }}
-          className={`${showParticipants ? 'flex' : 'hidden'} lg:flex w-80 bg-[#1A1A2E] border-l border-white/10 flex-col`}
+          className={`hidden lg:flex w-80 bg-[#1A1A2E] border-l border-white/10 flex-col`}
         >
           {/* Tabs */}
           <div className="flex border-b border-white/10">
