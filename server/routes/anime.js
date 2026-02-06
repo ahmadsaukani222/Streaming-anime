@@ -406,8 +406,8 @@ router.post('/video-token', async (req, res) => {
         const urlObj = new URL(videoUrl);
         const key = urlObj.pathname.substring(1); // Remove leading /
         
-        // Generate signed URL (10 minutes expiry)
-        const result = await getSignedVideoUrl(key, 600);
+        // Generate signed URL (4 hours expiry - enough for long movies + buffer)
+        const result = await getSignedVideoUrl(key, 14400);
         
         if (!result.success) {
             console.error('[VideoToken] Failed to generate signed URL:', result.error);

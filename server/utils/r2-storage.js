@@ -245,7 +245,7 @@ async function getPresignedUploadUrl(key, contentType = 'video/mp4', expiresIn =
  * @param {string} bucketType - 'video' atau 'frontend' (default: 'video')
  * @returns {Promise<{success: boolean, signedUrl: string, expiresIn: number}>}
  */
-async function getSignedVideoUrl(key, expiresIn = 600, bucketType = 'video') {
+async function getSignedVideoUrl(key, expiresIn = 14400, bucketType = 'video') {
     try {
         const bucket = bucketType === 'frontend' ? FRONTEND_BUCKET_NAME : VIDEO_BUCKET_NAME;
         
