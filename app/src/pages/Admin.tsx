@@ -425,17 +425,13 @@ export default function Admin() {
     saveHeroSettings(updated);
   };
 
-  // Toast notification state
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
-    show: false,
-    message: '',
-    type: 'success'
-  });
-
-  // Show toast notification
+  // Toast helper functions
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+    toast({
+      title: type === 'success' ? 'Berhasil!' : 'Error!',
+      description: message,
+      variant: type === 'success' ? 'success' : 'destructive',
+    });
   };
 
 

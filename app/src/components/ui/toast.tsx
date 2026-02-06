@@ -1,7 +1,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
@@ -149,7 +149,11 @@ export function useToast() {
   if (!context) {
     throw new Error("useToast must be used within a ToastProvider")
   }
-  return context
+  // Return toast as alias for addToast for easier usage
+  return {
+    ...context,
+    toast: context.addToast,
+  }
 }
 
 // Convenience functions
