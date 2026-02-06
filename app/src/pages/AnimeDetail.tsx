@@ -291,7 +291,7 @@ export default function AnimeDetail() {
             alt={anime.title}
             className="w-full h-full object-cover"
             loading="eager"
-            fetchpriority="high"
+            fetchPriority="high"
             decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F1A] via-[#0F0F1A]/80 to-[#0F0F1A]/30" />
@@ -331,7 +331,7 @@ export default function AnimeDetail() {
                   alt={anime.title}
                   className="w-full h-full object-cover"
                   loading="eager"
-                  fetchpriority="high"
+                  fetchPriority="high"
                   decoding="async"
                 />
               </div>
