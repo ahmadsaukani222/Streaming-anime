@@ -35,7 +35,8 @@ import {
   Captions,
   Award,
   Menu,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -2238,6 +2239,41 @@ export default function Admin() {
                       <Button onClick={createNewEpisode} className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
                         <Plus className="w-4 h-4 mr-2" /> Tambah Episode Manual
                       </Button>
+
+                      {/* Generate All Thumbnails Button */}
+                      <Button 
+                        onClick={async () => {
+                          try {
+                            toast({ title: 'Generating...', description: 'Membuat thumbnail untuk semua episode', variant: 'default' });
+                            const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/thumbnails/all`, {
+                              method: 'POST',
+                            });
+                            if (!res.ok) {
+                              const errData = await res.json().catch(() => ({}));
+                              throw new Error(errData.error || `HTTP ${res.status}`);
+                            }
+                            const data = await res.json();
+                            toast({ 
+                              title: 'Selesai!', 
+                              description: `${data.summary.generated} generated, ${data.summary.skipped} skipped, ${data.summary.failed} failed`, 
+                              variant: 'success' 
+                            });
+                            // Refresh anime data
+                            const animeRes = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
+                            if (animeRes.ok) {
+                              const refreshedAnime = await animeRes.json();
+                              setSelectedAnimeForEpisodes(refreshedAnime);
+                              updateAnime(refreshedAnime.id, refreshedAnime);
+                            }
+                          } catch (err: any) {
+                            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                          }
+                        }}
+                        variant="outline"
+                        className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                      >
+                        <Camera className="w-4 h-4 mr-2" /> Generate All Thumbnails
+                      </Button>
                     </div>
 
                     {/* Manual URL Scrape Section */}
@@ -2760,6 +2796,85 @@ export default function Admin() {
                           <p className="text-center text-white/30 text-sm py-2">Belum ada link manual.</p>
                         )}
                       </div>
+
+                      {/* Generate Thumbnail */}
+                      {(episodeToEdit.streams?.length > 0 || episodeToEdit.manualStreams?.length > 0) && (
+                        <div className="mt-4 pt-4 border-t border-white/10">
+                          <label className="text-sm font-medium text-white mb-2 block">
+                            {episodeToEdit.thumbnail ? 'Regenerate Thumbnail' : 'Generate Thumbnail'}
+                          </label>
+                          <div className="flex gap-2">
+                            <select 
+                              className="flex-1 px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm"
+                              value={episodeToEdit._thumbnailSource || ''}
+                              onChange={(e) => {
+                                setEpisodeToEdit({ ...episodeToEdit, _thumbnailSource: e.target.value });
+                              }}
+                            >
+                              <option value="">Pilih stream untuk thumbnail...</option>
+                              {/* Direct streams */}
+                              {episodeToEdit.streams
+                                ?.filter((s: any) => s.type === 'direct' || s.type === 'embed')
+                                .map((s: any, i: number) => (
+                                <option key={`stream-${i}`} value={s.url}>{s.server} ({s.quality})</option>
+                              ))}
+                              {/* Manual streams */}
+                              {episodeToEdit.manualStreams?.map((s: any, i: number) => (
+                                <option key={`manual-${i}`} value={s.url}>Manual: {s.server} ({s.quality})</option>
+                              ))}
+                            </select>
+                            <Button 
+                              onClick={async () => {
+                                const videoUrl = episodeToEdit._thumbnailSource || episodeToEdit.streams?.find((s: any) => s.type === 'direct')?.url || episodeToEdit.manualStreams?.[0]?.url;
+                                if (!videoUrl) {
+                                  toast({ title: 'Error', description: 'Pilih stream terlebih dahulu', variant: 'destructive' });
+                                  return;
+                                }
+                                try {
+                                  toast({ title: 'Generating...', description: 'Membuat thumbnail dari video', variant: 'default' });
+                                  const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/episode/${episodeToEdit.ep}/thumbnail`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ videoUrl }),
+                                  });
+                                  console.log('[Admin] Thumbnail response status:', res.status);
+                                  if (!res.ok) {
+                                    const errData = await res.json().catch(() => ({}));
+                                    console.error('[Admin] Thumbnail error:', errData);
+                                    throw new Error(errData.error || `HTTP ${res.status}`);
+                                  }
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    setEpisodeToEdit({ ...episodeToEdit, thumbnail: data.thumbnailUrl, _thumbnailSource: videoUrl });
+                                    toast({ title: 'Success', description: 'Thumbnail berhasil dibuat!', variant: 'success' });
+                                  } else {
+                                    toast({ title: 'Error', description: data.error || 'Gagal membuat thumbnail', variant: 'destructive' });
+                                  }
+                                } catch (err) {
+                                  toast({ title: 'Error', description: 'Terjadi kesalahan saat membuat thumbnail', variant: 'destructive' });
+                                }
+                              }}
+                              disabled={!episodeToEdit._thumbnailSource && !episodeToEdit.streams?.length && !episodeToEdit.manualStreams?.length}
+                              className="bg-[#6C5DD3] hover:bg-[#5a4ec0]"
+                              title={episodeToEdit.thumbnail ? 'Regenerate thumbnail' : 'Generate thumbnail'}
+                            >
+                              <Camera className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          {episodeToEdit.thumbnail && (
+                            <div className="mt-2">
+                              <img 
+                                src={episodeToEdit.thumbnail} 
+                                alt="Thumbnail preview" 
+                                className="w-full h-32 object-cover rounded-lg border border-white/10"
+                              />
+                              <p className="text-xs text-white/50 mt-1">
+                                Klik tombol untuk regenerate dengan timestamp berbeda (random 3-10 menit)
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

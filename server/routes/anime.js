@@ -882,5 +882,150 @@ router.delete('/:id/episode/:ep/subtitle', requireAdmin, async (req, res) => {
     }
 });
 
+// Generate thumbnail for episode
+router.post('/:id/episode/:ep/thumbnail', requireAdmin, async (req, res) => {
+    try {
+        const { id, ep } = req.params;
+        const { videoUrl, timestamp } = req.body;
+
+        const anime = await CustomAnime.findOne({ id });
+        if (!anime) {
+            return res.status(404).json({ error: 'Anime not found' });
+        }
+
+        const epIndex = anime.episodeData.findIndex(e => e.ep === parseInt(ep));
+        if (epIndex === -1) {
+            return res.status(404).json({ error: 'Episode not found' });
+        }
+
+        // Determine video URL - use provided or find from episode data
+        let targetVideoUrl = videoUrl;
+        if (!targetVideoUrl) {
+            // Try direct stream first
+            const directStream = anime.episodeData[epIndex].streams?.find(s => s.type === 'direct');
+            if (directStream) {
+                targetVideoUrl = directStream.url;
+            } else if (anime.episodeData[epIndex].manualStreams?.length > 0) {
+                // Fallback to manual stream
+                targetVideoUrl = anime.episodeData[epIndex].manualStreams[0].url;
+            }
+        }
+
+        if (!targetVideoUrl) {
+            return res.status(400).json({ error: 'No video URL provided or found' });
+        }
+
+        // Generate thumbnail (random 3-10 min if no timestamp provided)
+        const { generateThumbnail } = require('../utils/videoThumbnail');
+        const thumbnailUrl = await generateThumbnail(targetVideoUrl, id, parseInt(ep), timestamp);
+
+        // Save to episode data
+        anime.episodeData[epIndex].thumbnail = thumbnailUrl;
+        await anime.save();
+
+        res.json({ success: true, thumbnailUrl });
+    } catch (err) {
+        console.error('[Anime] Generate thumbnail error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get episode with thumbnail
+router.get('/:id/episode/:ep', async (req, res) => {
+    try {
+        const { id, ep } = req.params;
+
+        const anime = await CustomAnime.findOne({ id });
+        if (!anime) {
+            return res.status(404).json({ error: 'Anime not found' });
+        }
+
+        const episode = anime.episodeData.find(e => e.ep === parseInt(ep));
+        if (!episode) {
+            return res.status(404).json({ error: 'Episode not found' });
+        }
+
+        res.json(episode);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Generate thumbnails for all episodes
+router.post('/:id/thumbnails/all', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const anime = await CustomAnime.findOne({ id });
+        if (!anime) {
+            return res.status(404).json({ error: 'Anime not found' });
+        }
+
+        const { generateThumbnail } = require('../utils/videoThumbnail');
+        const results = [];
+        const errors = [];
+
+        // Process episodes sequentially
+        for (const episode of anime.episodeData) {
+            try {
+                // Find video stream for thumbnail - prefer direct, fallback to manual
+                let videoStream = episode.streams?.find(s => s.type === 'direct');
+                
+                // If no direct stream, try manual streams
+                if (!videoStream && episode.manualStreams?.length > 0) {
+                    videoStream = episode.manualStreams[0];
+                }
+                
+                if (!videoStream) {
+                    errors.push({ ep: episode.ep, error: 'No video stream found' });
+                    continue;
+                }
+
+                // Skip if thumbnail already exists
+                if (episode.thumbnail) {
+                    results.push({ ep: episode.ep, status: 'skipped', thumbnail: episode.thumbnail });
+                    continue;
+                }
+
+                console.log(`[Anime] Generating thumbnail for episode ${episode.ep}...`);
+                
+                // Generate thumbnail with random timestamp (3-10 minutes)
+                const thumbnailUrl = await generateThumbnail(
+                    videoStream.url, 
+                    id, 
+                    episode.ep
+                );
+
+                // Save to episode
+                episode.thumbnail = thumbnailUrl;
+                results.push({ ep: episode.ep, status: 'generated', thumbnail: thumbnailUrl });
+                
+            } catch (err) {
+                console.error(`[Anime] Failed to generate thumbnail for ep ${episode.ep}:`, err.message);
+                errors.push({ ep: episode.ep, error: err.message });
+            }
+        }
+
+        // Save all changes
+        await anime.save();
+
+        res.json({ 
+            success: true, 
+            results,
+            errors,
+            summary: {
+                total: anime.episodeData.length,
+                generated: results.filter(r => r.status === 'generated').length,
+                skipped: results.filter(r => r.status === 'skipped').length,
+                failed: errors.length
+            }
+        });
+
+    } catch (err) {
+        console.error('[Anime] Generate all thumbnails error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
 

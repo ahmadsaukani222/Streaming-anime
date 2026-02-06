@@ -22,6 +22,7 @@ const customAnimeSchema = new mongoose.Schema({
         ep: Number,
         title: String,
         releaseDate: String,
+        thumbnail: String, // Episode thumbnail URL (auto-generated)
         streams: [{
             server: String,
             url: String,

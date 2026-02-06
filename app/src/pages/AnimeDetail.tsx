@@ -698,12 +698,17 @@ export default function AnimeDetail() {
               {filteredEpisodes.map((epNum) => {
                 const isWatched = watchedEpisodes.includes(epNum);
                 const isLatest = epNum === latestEpisode;
+                // Get episode thumbnail from episodeData if available, else use anime poster
+                const episodeData = anime.episodeData?.find((e: any) => e.ep === epNum);
+                const thumbnailUrl = episodeData?.thumbnail || anime.poster;
+                const hasRealThumbnail = !!episodeData?.thumbnail;
+                
                 return (
                   <Link
                     to={`/watch/${anime.id}/${epNum}`}
                     key={epNum}
                     id={epNum === latestEpisode ? 'latest-episode' : undefined}
-                    className={`group relative block rounded-xl border transition-all duration-300 hover:scale-[1.02] cursor-pointer ${episodeView === 'compact' ? 'p-3' : 'p-4'} ${isLatest
+                    className={`group relative block rounded-xl border transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden ${isLatest
                       ? 'bg-yellow-500/10 border-yellow-500/40 hover:border-yellow-500/60 shadow-[0_0_0_1px_rgba(234,179,8,0.2),0_0_24px_rgba(234,179,8,0.12)]'
                       : isWatched
                       ? 'bg-green-500/10 border-green-500/30 hover:border-green-500/50'
@@ -712,52 +717,93 @@ export default function AnimeDetail() {
                         : 'bg-white/5 border-white/10 hover:border-[#6C5DD3]/50 hover:bg-white/10'
                       }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white group-hover:text-[#6C5DD3] transition-colors">
-                        EP {epNum}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {isLatest && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
-                            Terbaru
-                          </span>
-                        )}
-                        {lastWatched?.episodeNumber === epNum && (
-                          <span className="text-xs text-[#6C5DD3]">Terakhir</span>
-                        )}
-                        {isWatched && (
-                          <Check className="w-4 h-4 text-green-400" />
-                        )}
+                    {/* Episode Thumbnail */}
+                    <div className={`relative aspect-video overflow-hidden ${!hasRealThumbnail ? 'bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A]' : ''}`}>
+                      {/* Episode thumbnail image */}
+                      <img
+                        src={thumbnailUrl}
+                        alt={`Episode ${epNum}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        style={!hasRealThumbnail ? {
+                          // Vary the appearance per episode using hue rotation and brightness
+                          filter: `hue-rotate(${(epNum * 15) % 360}deg) brightness(${0.7 + (epNum % 3) * 0.15})`,
+                        } : {}}
+                        loading="lazy"
+                      />
+                      {!hasRealThumbnail && (
+                        <>
+                          {/* Gradient Overlay */}
+                          <div 
+                            className="absolute inset-0 opacity-60"
+                            style={{
+                              background: `linear-gradient(${135 + (epNum * 30) % 90}deg, ${['rgba(108,93,211,0.3)', 'rgba(234,179,8,0.3)', 'rgba(34,197,94,0.3)', 'rgba(239,68,68,0.3)'][epNum % 4]} 0%, transparent 60%)`
+                            }}
+                          />
+                          {/* Episode Number Watermark */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-5xl sm:text-6xl font-bold text-white/5 select-none">{epNum}</span>
+                          </div>
+                        </>
+                      )}
+                      {/* Episode Number Badge */}
+                      <div className="absolute top-2 left-2 bg-black/70 px-2 py-1 rounded-lg">
+                        <span className="text-xs font-bold text-white">EP {epNum}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-white/50 text-xs">
-                        <Clock className="w-3 h-3" />
+                      {/* Watched Indicator */}
+                      {isWatched && (
+                        <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                          <div className="bg-green-500 rounded-full p-2">
+                            <Check className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Play className="w-12 h-12 text-white drop-shadow-lg" fill="white" />
+                      </div>
+                      {/* Duration Badge */}
+                      <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-[10px] text-white/90">
                         {anime.duration}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToggleEpisodeWatched(epNum);
-                        }}
-                        className={`p-1.5 rounded-lg transition-colors ${isWatched
-                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                          : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
-                          }`}
-                        title={isWatched ? 'Tandai belum ditonton' : 'Tandai sudah ditonton'}
-                      >
-                        {isWatched ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
                     </div>
-                    {lastWatched?.episodeNumber === epNum && lastWatched.progress > 0 && (
-                      <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#6C5DD3] rounded-full"
-                          style={{ width: `${lastWatched.progress}%` }}
-                        />
+                    
+                    {/* Episode Info */}
+                    <div className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {isLatest && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                              Terbaru
+                            </span>
+                          )}
+                          {lastWatched?.episodeNumber === epNum && (
+                            <span className="text-xs text-[#6C5DD3]">Terakhir</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleToggleEpisodeWatched(epNum);
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${isWatched
+                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                            }`}
+                          title={isWatched ? 'Tandai belum ditonton' : 'Tandai sudah ditonton'}
+                        >
+                          {isWatched ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
                       </div>
-                    )}
+                      {lastWatched?.episodeNumber === epNum && lastWatched.progress > 0 && (
+                        <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#6C5DD3] rounded-full"
+                            style={{ width: `${lastWatched.progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </Link>
                 );
               })}
