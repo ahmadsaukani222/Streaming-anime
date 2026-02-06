@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, lazy } from 'react-router-dom';
-import { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AppProvider } from '@/context/AppContext';
 import { useEffect } from 'react';
 import Lenis from 'lenis';
