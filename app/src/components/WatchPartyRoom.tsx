@@ -32,7 +32,7 @@ export default function WatchPartyRoom({
   episodeId,
   animeTitle,
   episodeNumber,
-  isHost: initialHost = false,
+  isHost: _initialHost = false,
   onClose,
   videoRef: externalVideoRef,
 }: WatchPartyRoomProps) {
