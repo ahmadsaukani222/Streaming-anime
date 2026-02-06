@@ -2449,11 +2449,17 @@ export default function Admin() {
                         value={batchQuality}
                         onChange={(e) => setBatchQuality(e.target.value)}
                         disabled={isBatchUploading}
-                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none"
+                        className="px-4 py-2 bg-[#1A1A2E] border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none appearance-none cursor-pointer"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 12px center',
+                          paddingRight: '36px'
+                        }}
                       >
-                        <option value="480p">480p</option>
-                        <option value="720p">720p</option>
-                        <option value="1080p">1080p</option>
+                        <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                        <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                        <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
                       </select>
                     </div>
 
@@ -2645,11 +2651,17 @@ export default function Admin() {
                             <select
                               value={uploadQuality}
                               onChange={(e) => setUploadQuality(e.target.value)}
-                              className="w-full px-3 py-2.5 bg-[#1A1A2E] rounded-xl border border-white/10 text-white text-sm"
+                              className="w-full px-3 py-2.5 bg-[#1A1A2E] rounded-xl border border-white/10 text-white text-sm appearance-none cursor-pointer"
+                              style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'right 12px center',
+                                paddingRight: '36px'
+                              }}
                             >
-                              <option value="480p">480p</option>
-                              <option value="720p">720p</option>
-                              <option value="1080p">1080p</option>
+                              <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                              <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                              <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
                             </select>
                           </div>
 
@@ -2700,11 +2712,21 @@ export default function Admin() {
                         </div>
                         <div className="md:col-span-2">
                           <label className="text-xs text-white/50 mb-1 block">Quality</label>
-                          <select value={streamQuality} onChange={(e) => setStreamQuality(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm">
-                            <option value="1080p">1080p</option>
-                            <option value="720p">720p</option>
-                            <option value="480p">480p</option>
-                            <option value="360p">360p</option>
+                          <select 
+                            value={streamQuality} 
+                            onChange={(e) => setStreamQuality(e.target.value)} 
+                            className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm appearance-none cursor-pointer"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 10px center',
+                              paddingRight: '32px'
+                            }}
+                          >
+                            <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
+                            <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                            <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                            <option value="360p" className="bg-[#1A1A2E] text-white">360p</option>
                           </select>
                         </div>
                         <div className="md:col-span-2">
