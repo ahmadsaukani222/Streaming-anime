@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Suspense, lazy } from 'react-router-dom';
 import { AppProvider } from '@/context/AppContext';
 import { useEffect } from 'react';
 import Lenis from 'lenis';
@@ -7,32 +7,55 @@ import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/toast';
+import PageLoader from '@/components/PageLoader';
 
-// Pages
+// ==========================================
+// CRITICAL PAGES (Eager Loaded)
+// These are the main entry points that should load immediately
+// ==========================================
 import Home from '@/pages/Home';
 import AnimeDetail from '@/pages/AnimeDetail';
-import Watch from '@/pages/Watch';
 import Search from '@/pages/Search';
 import AnimeList from '@/pages/AnimeList';
-import Movies from '@/pages/Movies';
 import Genres from '@/pages/Genres';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import Profile from '@/pages/Profile';
-import Admin from '@/pages/Admin';
-import Community from '@/pages/Community';
-import DiscussionDetail from '@/pages/DiscussionDetail';
 import Schedule from '@/pages/Schedule';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
-import Privacy from '@/pages/Privacy';
-import Terms from '@/pages/Terms';
-import FAQ from '@/pages/FAQ';
-import Donate from '@/pages/Donate';
 import NotFound from '@/pages/NotFound';
 import { WebsiteSchema } from '@/components/SchemaOrg';
 
+// ==========================================
+// LAZY LOADED PAGES (Code Splitting)
+// These pages are loaded on-demand to reduce initial bundle size
+// ==========================================
+
+// Auth Pages (only needed for login/register)
+const Login = lazy(() => import('@/pages/Login'));
+const Register = lazy(() => import('@/pages/Register'));
+
+// User Pages (only needed for logged in users)
+const Profile = lazy(() => import('@/pages/Profile'));
+
+// Watch Page (heavy video player, only needed when watching)
+const Watch = lazy(() => import('@/pages/Watch'));
+
+// Content Pages (optional navigation)
+const Movies = lazy(() => import('@/pages/Movies'));
+const Community = lazy(() => import('@/pages/Community'));
+const DiscussionDetail = lazy(() => import('@/pages/DiscussionDetail'));
+
+// Info Pages (static content)
+const About = lazy(() => import('@/pages/About'));
+const Contact = lazy(() => import('@/pages/Contact'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const Terms = lazy(() => import('@/pages/Terms'));
+const FAQ = lazy(() => import('@/pages/FAQ'));
+const Donate = lazy(() => import('@/pages/Donate'));
+
+// Admin Page (heavy, only for admins)
+const Admin = lazy(() => import('@/pages/Admin'));
+
+// ==========================================
 // Lenis Smooth Scroll Component (disabled on mobile for better performance)
+// ==========================================
 function SmoothScroll({ children }: { children: React.ReactNode }) {
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
 
@@ -73,6 +96,130 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// ==========================================
+// ROUTE CONFIGURATION
+// ==========================================
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Critical Routes - Eager Loaded */}
+      <Route path="/" element={<Home />} />
+      <Route path="/anime/:id" element={<AnimeDetail />} />
+      <Route path="/search" element={<Search />} />
+      <Route path="/anime-list" element={<AnimeList />} />
+      <Route path="/genres" element={<Genres />} />
+      <Route path="/schedule" element={<Schedule />} />
+
+      {/* Auth Routes - Lazy Loaded */}
+      <Route path="/login" element={
+        <Suspense fallback={<PageLoader />}>
+          <Login />
+        </Suspense>
+      } />
+      <Route path="/register" element={
+        <Suspense fallback={<PageLoader />}>
+          <Register />
+        </Suspense>
+      } />
+
+      {/* User Routes - Lazy Loaded */}
+      <Route path="/profile" element={
+        <Suspense fallback={<PageLoader />}>
+          <Profile />
+        </Suspense>
+      } />
+      <Route path="/bookmarks" element={
+        <Suspense fallback={<PageLoader />}>
+          <Profile />
+        </Suspense>
+      } />
+      <Route path="/watchlist" element={
+        <Suspense fallback={<PageLoader />}>
+          <Profile />
+        </Suspense>
+      } />
+
+      {/* Watch Routes - Lazy Loaded (Heavy Video Player) */}
+      <Route path="/watch/:id/:episode" element={
+        <Suspense fallback={<PageLoader />}>
+          <Watch />
+        </Suspense>
+      } />
+      <Route path="/watch/:id" element={
+        <Suspense fallback={<PageLoader />}>
+          <Watch />
+        </Suspense>
+      } />
+
+      {/* Content Routes - Lazy Loaded */}
+      <Route path="/movies" element={
+        <Suspense fallback={<PageLoader />}>
+          <Movies />
+        </Suspense>
+      } />
+      <Route path="/community" element={
+        <Suspense fallback={<PageLoader />}>
+          <Community />
+        </Suspense>
+      } />
+      <Route path="/community/discussion/:id" element={
+        <Suspense fallback={<PageLoader />}>
+          <DiscussionDetail />
+        </Suspense>
+      } />
+
+      {/* Info Routes - Lazy Loaded */}
+      <Route path="/about" element={
+        <Suspense fallback={<PageLoader />}>
+          <About />
+        </Suspense>
+      } />
+      <Route path="/contact" element={
+        <Suspense fallback={<PageLoader />}>
+          <Contact />
+        </Suspense>
+      } />
+      <Route path="/donate" element={
+        <Suspense fallback={<PageLoader />}>
+          <Donate />
+        </Suspense>
+      } />
+      <Route path="/privacy" element={
+        <Suspense fallback={<PageLoader />}>
+          <Privacy />
+        </Suspense>
+      } />
+      <Route path="/terms" element={
+        <Suspense fallback={<PageLoader />}>
+          <Terms />
+        </Suspense>
+      } />
+      <Route path="/faq" element={
+        <Suspense fallback={<PageLoader />}>
+          <FAQ />
+        </Suspense>
+      } />
+
+      {/* Admin Route - Lazy Loaded (Heavy Admin Panel) */}
+      <Route path="/admin" element={
+        <Suspense fallback={<PageLoader />}>
+          <Admin />
+        </Suspense>
+      } />
+
+      {/* Redirects for legacy routes */}
+      <Route path="/latest-episodes" element={<AnimeList />} />
+      <Route path="/top-rated" element={<AnimeList />} />
+
+      {/* 404 Catch-all - must be last */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+// ==========================================
+// MAIN APP COMPONENT
+// ==========================================
 function App() {
   return (
     <ErrorBoundary>
@@ -84,48 +231,13 @@ function App() {
               <WebsiteSchema />
               <div className="min-h-screen bg-[#0F0F1A]">
                 <Navbar />
-                <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/anime/:id" element={<AnimeDetail />} />
-              <Route path="/watch/:id/:episode" element={<Watch />} />
-              <Route path="/watch/:id" element={<Watch />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/anime-list" element={<AnimeList />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/bookmarks" element={<Profile />} />
-              <Route path="/watchlist" element={<Profile />} />
-              <Route path="/admin" element={<Admin />} />
-
-              {/* Content pages */}
-              <Route path="/genres" element={<Genres />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/community/discussion/:id" element={<DiscussionDetail />} />
-              <Route path="/schedule" element={<Schedule />} />
-
-              {/* Info pages */}
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/donate" element={<Donate />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/faq" element={<FAQ />} />
-
-              {/* Redirects for legacy routes */}
-              <Route path="/latest-episodes" element={<AnimeList />} />
-              <Route path="/top-rated" element={<AnimeList />} />
-
-              {/* 404 Catch-all - must be last */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Footer />
-          </div>
-        </SmoothScroll>
-      </Router>
-    </AppProvider>
-    </ToastProvider>
+                <AppRoutes />
+                <Footer />
+              </div>
+            </SmoothScroll>
+          </Router>
+        </AppProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }
