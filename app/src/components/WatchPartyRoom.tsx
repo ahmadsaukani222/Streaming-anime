@@ -209,14 +209,8 @@ export default function WatchPartyRoom({
           </div>
         </div>
 
-        {/* Video Container - This will be filled by parent */}
-        <div className="flex-1 flex items-center justify-center bg-black">
-          <div className="text-center text-white/40">
-            <Play className="w-16 h-16 mx-auto mb-4" />
-            <p>Video player area</p>
-            <p className="text-sm">(Controlled by parent component)</p>
-          </div>
-        </div>
+        {/* Video Container - Transparent to show video player from parent */}
+        <div className="flex-1 bg-transparent pointer-events-none" />
       </div>
 
       {/* Sidebar - Chat & Participants */}
