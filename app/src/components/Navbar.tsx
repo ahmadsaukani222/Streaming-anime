@@ -100,6 +100,17 @@ export default function Navbar() {
     };
   }, []);
 
+  // Listen for global search trigger from BottomNav
+  useEffect(() => {
+    const handleOpenSearch = () => {
+      setIsSearchOpen(true);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.addEventListener('openGlobalSearch', handleOpenSearch);
+    return () => window.removeEventListener('openGlobalSearch', handleOpenSearch);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {

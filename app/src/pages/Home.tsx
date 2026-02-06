@@ -8,6 +8,7 @@ import ForYouSection from '@/components/ForYouSection';
 import ScheduleWidget from '@/components/ScheduleWidget';
 import UserStatsWidget from '@/components/UserStatsWidget';
 import RandomAnimeButton from '@/components/RandomAnimeButton';
+import MobileHome from '@/components/MobileHome';
 import { HomePageSkeleton } from '@/components/SkeletonLoading';
 import { HomeSEO } from '@/components/Seo';
 import { useApp } from '@/context/AppContext';
@@ -327,7 +328,21 @@ export default function Home() {
       </div>
 
       <div className="relative z-10 bg-[#0F0F1A]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-12">
+        {/* Mobile Layout - Only visible on mobile */}
+        <div className="sm:hidden">
+          <MobileHome
+            trendingAnime={trendingAnime}
+            ongoingAnime={ongoingAnime}
+            latestAnime={latestAnime}
+            topRatedAnime={topRatedAnime}
+            completedAnime={completedAnime}
+            popularGenres={popularGenres}
+            sidebarWidgets={sidebarWidgets}
+          />
+        </div>
+
+        {/* Desktop Layout - Hidden on mobile */}
+        <div className="hidden sm:block max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-12">
 
           <section className="relative z-20 mt-6 sm:mt-8 mb-6 sm:mb-8">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-transparent p-4 sm:p-5 shadow-xl shadow-black/20 backdrop-blur">
@@ -618,7 +633,7 @@ export default function Home() {
           </aside>
 
         </div>
-      </div>
+        </div>
       </div>
     </main>
   );
