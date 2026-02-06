@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Play, Star, Bookmark, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
 import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
 import OptimizedImage from './OptimizedImage';
+import { MotionDiv } from './MotionWrapper';
 
 interface AnimeCardProps {
   anime: Anime;
@@ -17,7 +17,7 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
 
   if (variant === 'horizontal') {
     return (
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.1 }}
@@ -57,13 +57,13 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
             ))}
           </div>
         </div>
-      </motion.div>
+      </MotionDiv>
     );
   }
 
   if (variant === 'compact') {
     return (
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: index * 0.05 }}
@@ -109,12 +109,12 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
             </div>
           </div>
         </Link>
-      </motion.div>
+      </MotionDiv>
     );
   }
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
@@ -203,6 +203,6 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
           </div>
         </div>
       </Link>
-    </motion.div>
+    </MotionDiv>
   );
 }
