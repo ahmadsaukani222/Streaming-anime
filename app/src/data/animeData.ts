@@ -9,6 +9,19 @@ export interface EpisodeMetadata {
   manualStreams?: any[]; // Manual upload streams
 }
 
+export interface Character {
+  id: string;
+  name: string;
+  nameJp?: string;
+  role: 'Main' | 'Supporting';
+  image: string;
+  voiceActor?: {
+    name: string;
+    nameJp?: string;
+    image?: string;
+  };
+}
+
 export interface Anime {
   id: string;
   title: string;
@@ -32,6 +45,7 @@ export interface Anime {
     jam: string;
   };
   episodeData?: EpisodeMetadata[]; // Optional: episode metadata from API
+  characters?: Character[]; // Optional: character data
   // Backend metadata fields
   lastEpisodeUpload?: string; // ISO date string
   createdAt?: string; // ISO date string

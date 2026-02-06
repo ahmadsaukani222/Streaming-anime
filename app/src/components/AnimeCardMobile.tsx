@@ -4,6 +4,7 @@ import type { Anime } from '@/data/animeData';
 import { motion } from 'framer-motion';
 import OptimizedImage from '@/components/OptimizedImage';
 import StatusBadge from '@/components/StatusBadge';
+import TypeBadge from '@/components/TypeBadge';
 import { THEME } from '@/config/theme';
 
 interface AnimeCardMobileProps {
@@ -68,8 +69,13 @@ function ListView({ anime, index = 0, progress, episodeTitle }: AnimeCardMobileP
               {anime.rating}
             </span>
             
-            {/* Status */}
-            <StatusBadge status={anime.status} variant="subtle" className="!text-[10px] !px-1.5 !py-0.5 !rounded" />
+            {/* Status & Type */}
+            <div className="flex items-center gap-1">
+              <StatusBadge status={anime.status} variant="subtle" className="!text-[10px] !px-1.5 !py-0.5 !rounded" />
+              {anime.type && (
+                <TypeBadge type={anime.type} variant="card" className="!text-[9px] !px-1.5 !py-0.5" />
+              )}
+            </div>
           </div>
 
           {/* Episodes count */}
@@ -124,9 +130,12 @@ function CompactView({ anime, index = 0 }: AnimeCardMobileProps) {
             <span className="text-[10px] font-medium text-white">{anime.rating}</span>
           </div>
 
-          {/* Status - Small badge */}
-          <div className="absolute top-1.5 left-1.5">
+          {/* Status & Type - Horizontal */}
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
             <StatusBadge status={anime.status} variant="solid" className="!text-[8px] !px-1 !py-0" />
+            {anime.type && (
+              <TypeBadge type={anime.type} variant="card" className="!text-[8px] !px-1 !py-0" />
+            )}
           </div>
 
           {/* Title at bottom */}
@@ -163,6 +172,13 @@ function PosterView({ anime, index = 0 }: AnimeCardMobileProps) {
           <div className="absolute inset-0 bg-black/40 opacity-0 group-active:opacity-100 transition-opacity flex items-center justify-center">
             <Play className="w-8 h-8 text-white fill-current" />
           </div>
+
+          {/* Type badge - top left */}
+          {anime.type && (
+            <div className="absolute top-1.5 left-1.5">
+              <TypeBadge type={anime.type} variant="card" className="!text-[8px] !px-1 !py-0" />
+            </div>
+          )}
 
           {/* Rating badge */}
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded-md">

@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import { MotionDiv } from '@/components/MotionWrapper';
 import StatusBadge from '@/components/StatusBadge';
+import TypeBadge from '@/components/TypeBadge';
 
 interface AnimeCardProps {
   anime: Anime;
@@ -130,14 +131,19 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
 
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2">
-          {/* Status Badge */}
-          {anime.status && (
-            <StatusBadge 
-              status={anime.status} 
-              variant="solid" 
-              className="text-[10px] font-bold uppercase tracking-wide rounded-md shrink-0 !px-2 !py-0.5"
-            />
-          )}
+          {/* Status & Type Badges - Horizontal */}
+          <div className="flex items-center gap-1.5">
+            {anime.status && (
+              <StatusBadge 
+                status={anime.status} 
+                variant="solid" 
+                className="text-[10px] font-bold uppercase tracking-wide rounded-md shrink-0 !px-2 !py-0.5"
+              />
+            )}
+            {anime.type && (
+              <TypeBadge type={anime.type} variant="card" />
+            )}
+          </div>
 
           {/* Rating Badge */}
           <div className="flex items-center gap-1 px-1.5 py-0.5 bg-black/70 backdrop-blur-[2px] sm:backdrop-blur-md rounded-md border border-white/10 shrink-0">
@@ -171,19 +177,6 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
 
           <div className="flex items-center justify-between text-[10px] text-white/60">
             <div className="flex items-center gap-2">
-              {/* Type Badge */}
-              {anime.type && (
-                <span className={`px-1.5 py-0.5 font-semibold rounded text-[9px] uppercase ${anime.type === 'Movie'
-                    ? 'bg-purple-500/80 text-white'
-                    : anime.type === 'OVA' || anime.type === 'ONA'
-                      ? 'bg-orange-500/80 text-white'
-                      : anime.type === 'Special'
-                        ? 'bg-pink-500/80 text-white'
-                        : 'bg-cyan-500/80 text-white'
-                  }`}>
-                  {anime.type}
-                </span>
-              )}
               <span className="flex items-center gap-1">
                 <span className="w-1 h-1 rounded-full bg-[#6C5DD3]" />
                 {anime.episodes ? `${anime.episodes} EP` : '? EP'}

@@ -1117,13 +1117,59 @@ export default function Watch() {
       {/* Info & Controls Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Main Title */}
           <h1 className="text-xl sm:text-2xl font-bold text-white mb-3">{anime.title} - Episode {currentEpisode}</h1>
+          
+          {/* Meta Tags Bar */}
           <div className="flex flex-wrap items-center gap-2 text-sm mb-6">
             <span className="px-3 py-1 bg-[#6C5DD3]/20 text-[#6C5DD3] rounded-full font-medium">{anime.studio}</span>
             <span className="px-2 py-1 bg-white/5 text-white/60 rounded-full">{anime.releasedYear}</span>
             <span className="w-1 h-1 bg-white/30 rounded-full" />
             <span className="text-white/50">Episode {currentEpisode} / {totalEpisodes}</span>
+            {anime.rating && (
+              <>
+                <span className="w-1 h-1 bg-white/30 rounded-full" />
+                <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded-full">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                  {anime.rating}
+                </span>
+              </>
+            )}
           </div>
+
+          {/* Episode Details Card */}
+          {(() => {
+            const currentEpData = anime.episodeData?.find((e: any) => (e.ep || e.episodeNumber) === currentEpisode);
+            if (!currentEpData?.title && !currentEpData?.thumbnail) return null;
+            
+            return (
+              <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-white/5 to-white/[0.02] border border-white/10">
+                <div className="flex gap-4">
+                  {currentEpData.thumbnail && (
+                    <div className="flex-shrink-0 w-32 sm:w-40 aspect-video rounded-xl overflow-hidden bg-white/5">
+                      <img 
+                        src={currentEpData.thumbnail} 
+                        alt={`Episode ${currentEpisode}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {currentEpData.title && (
+                      <h3 className="text-white font-semibold mb-1 truncate">{currentEpData.title}</h3>
+                    )}
+                    <p className="text-white/50 text-sm">Episode {currentEpisode}</p>
+                    {currentEpData.releaseDate && (
+                      <p className="text-white/40 text-xs mt-1">
+                        Rilis: {new Date(currentEpData.releaseDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Server & Quality Selection */}
           <div className="flex flex-wrap items-start gap-6 mb-6">
@@ -1165,10 +1211,137 @@ export default function Watch() {
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mb-6">
-            <button onClick={() => goToEpisode(currentEpisode - 1)} disabled={currentEpisode <= 1} className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl text-white/70 hover:bg-white/10 disabled:opacity-30 text-sm"><ChevronLeftIcon className="w-4 h-4" />Prev</button>
-            <button onClick={() => goToEpisode(currentEpisode + 1)} disabled={currentEpisode >= totalEpisodes} className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl text-white/70 hover:bg-white/10 disabled:opacity-30 text-sm">Next<ChevronRight className="w-4 h-4" /></button>
+          {/* Navigation with Up Next Preview */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {/* Prev Episode */}
+            <button 
+              onClick={() => goToEpisode(currentEpisode - 1)} 
+              disabled={currentEpisode <= 1} 
+              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                <ChevronLeftIcon className="w-5 h-5 text-white/70" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-white/50 text-xs">Sebelumnya</p>
+                <p className="text-white font-medium text-sm truncate">Episode {currentEpisode - 1}</p>
+              </div>
+            </button>
+
+            {/* Current Episode Info */}
+            <div className="hidden sm:flex items-center justify-center p-3 rounded-xl bg-[#6C5DD3]/10 border border-[#6C5DD3]/20">
+              <div className="text-center">
+                <p className="text-[#6C5DD3] text-xs font-medium">Sedang Menonton</p>
+                <p className="text-white font-bold">Episode {currentEpisode}</p>
+              </div>
+            </div>
+
+            {/* Next Episode */}
+            <button 
+              onClick={() => goToEpisode(currentEpisode + 1)} 
+              disabled={currentEpisode >= totalEpisodes} 
+              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-right sm:flex-row-reverse"
+            >
+              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                <ChevronRight className="w-5 h-5 text-white/70" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white/50 text-xs">Selanjutnya</p>
+                <p className="text-white font-medium text-sm truncate">Episode {currentEpisode + 1}</p>
+              </div>
+            </button>
+          </div>
+
+          {/* Up Next Section - Only show if there's a next episode */}
+          {currentEpisode < totalEpisodes && (
+            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#6C5DD3]/10 to-transparent border border-[#6C5DD3]/20">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-[#6C5DD3] animate-pulse" />
+                <h3 className="text-white font-medium text-sm">Up Next</h3>
+              </div>
+              <div className="flex items-center gap-4">
+                {(() => {
+                  const nextEp = anime.episodeData?.find((e: any) => (e.ep || e.episodeNumber) === currentEpisode + 1);
+                  return (
+                    <>
+                      <div className="w-24 sm:w-32 aspect-video rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
+                        <img 
+                          src={nextEp?.thumbnail || anime.poster} 
+                          alt={`Episode ${currentEpisode + 1}`}
+                          className="w-full h-full object-cover opacity-80"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-semibold mb-1">Episode {currentEpisode + 1}</p>
+                        {nextEp?.title && (
+                          <p className="text-white/60 text-sm truncate mb-2">{nextEp.title}</p>
+                        )}
+                        <button 
+                          onClick={() => goToEpisode(currentEpisode + 1)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white text-sm font-medium rounded-xl transition-colors"
+                        >
+                          <Play className="w-4 h-4 fill-current" />
+                          Tonton Selanjutnya
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Anime Synopsis */}
+          {anime.synopsis && (
+            <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+              <h3 className="text-white font-medium mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#6C5DD3]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Sinopsis
+              </h3>
+              <p className="text-white/60 text-sm leading-relaxed line-clamp-3">{anime.synopsis}</p>
+            </div>
+          )}
+
+          {/* Genres Tags */}
+          {anime.genres && anime.genres.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-white/50 text-xs mb-2">Genre</h3>
+              <div className="flex flex-wrap gap-2">
+                {anime.genres.map((genre: string) => (
+                  <Link 
+                    key={genre}
+                    to={`/anime-list?genre=${encodeURIComponent(genre)}`}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs rounded-full transition-colors border border-white/10"
+                  >
+                    {genre}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Anime Stats */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+            <div className="p-3 rounded-xl bg-white/5 text-center">
+              <p className="text-white/40 text-xs mb-1">Status</p>
+              <p className={`text-sm font-medium ${anime.status === 'Ongoing' ? 'text-green-400' : 'text-blue-400'}`}>{anime.status}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 text-center">
+              <p className="text-white/40 text-xs mb-1">Tipe</p>
+              <p className="text-white text-sm font-medium">{anime.type || 'TV'}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 text-center">
+              <p className="text-white/40 text-xs mb-1">Episode</p>
+              <p className="text-white text-sm font-medium">{totalEpisodes}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 text-center">
+              <p className="text-white/40 text-xs mb-1">Tahun</p>
+              <p className="text-white text-sm font-medium">{anime.releasedYear}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 text-center">
+              <p className="text-white/40 text-xs mb-1">Durasi</p>
+              <p className="text-white text-sm font-medium">{anime.duration || '-'}</p>
+            </div>
           </div>
 
           {/* Episode Comments Section */}

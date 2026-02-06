@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import ScheduleWidget from '@/components/ScheduleWidget';
 import StatusBadge from '@/components/StatusBadge';
+import TypeBadge from '@/components/TypeBadge';
 import type { SidebarWidget } from '@/types';
 
 interface DesktopHomeProps {
@@ -67,9 +68,7 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             <StatusBadge status={anime.status} variant="solid" />
             {anime.type && (
-              <span className="px-1.5 py-0.5 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold rounded border border-white/10">
-                {anime.type}
-              </span>
+              <TypeBadge type={anime.type} variant="card" />
             )}
           </div>
 
@@ -94,7 +93,7 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-          className={`absolute -top-2 ${tooltipPosition === 'right' ? 'left-full ml-2' : 'right-full mr-2'} z-[100] w-[280px]`}
+          className={`absolute -top-2 ${tooltipPosition === 'right' ? 'left-full ml-2' : 'right-full mr-2'} z-[9999] w-[280px]`}
           style={{ pointerEvents: 'none' }}
         >
           <div className="bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
@@ -107,9 +106,12 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A2E] via-[#1A1A2E]/50 to-transparent" />
               
-              {/* Status badge on banner */}
-              <div className="absolute top-2.5 left-2.5">
+              {/* Status & Type badges - Horizontal */}
+              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                 <StatusBadge status={anime.status} variant="solid" />
+                {anime.type && (
+                  <TypeBadge type={anime.type} variant="card" />
+                )}
               </div>
               
               {/* Play button */}
@@ -148,13 +150,8 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
                 </div>
               </div>
 
-              {/* Studio & Type */}
+              {/* Studio */}
               <div className="flex flex-wrap gap-1 mb-2">
-                {anime.type && (
-                  <span className="px-1.5 py-0.5 rounded bg-[#6C5DD3]/20 text-[#B7ABFF] text-[9px] font-medium border border-[#6C5DD3]/30">
-                    {anime.type}
-                  </span>
-                )}
                 <span className="px-1.5 py-0.5 rounded bg-white/5 text-white/60 text-[9px]">
                   {anime.studio}
                 </span>
