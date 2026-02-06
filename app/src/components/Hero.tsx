@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { apiFetch } from '@/lib/api';
+import OptimizedImage from './OptimizedImage';
 
 export default function Hero() {
   const { animeList } = useApp();
@@ -194,11 +195,13 @@ export default function Hero() {
               />
             )
           ) : (
-            <img
+            <OptimizedImage
               src={slide.poster}
               alt={slide.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
+              aspectRatio="banner"
+              priority
+              className="w-full h-full"
+              containerClassName="w-full h-full"
             />
           )}
           {/* Gradient Overlays */}
@@ -372,11 +375,11 @@ export default function Hero() {
               : 'w-16 h-10 opacity-50 hover:opacity-100'
               }`}
           >
-            <img
+            <OptimizedImage
               src={item.poster}
               alt={item.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
+              aspectRatio="poster"
+              containerClassName="w-full h-full"
             />
             {/* Progress Bar on Active */}
             {index === currentSlide && (

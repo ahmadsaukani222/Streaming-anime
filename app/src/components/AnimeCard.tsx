@@ -3,6 +3,7 @@ import { Play, Star, Bookmark, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
+import OptimizedImage from './OptimizedImage';
 
 interface AnimeCardProps {
   anime: Anime;
@@ -23,11 +24,11 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
         className="group flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300"
       >
         <Link to={`/anime/${anime.id}`} className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden">
-          <img
+          <OptimizedImage
             src={anime.poster}
             alt={anime.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
+            aspectRatio="poster"
+            className="transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <Play className="w-8 h-8 text-white fill-current" />
@@ -69,11 +70,11 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
         className="group relative"
       >
         <Link to={`/anime/${anime.id}`} className="block relative aspect-[3/4] rounded-xl overflow-hidden">
-          <img
+          <OptimizedImage
             src={anime.poster}
             alt={anime.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
+            aspectRatio="poster"
+            className="transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
@@ -119,12 +120,12 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
       transition={{ delay: index * 0.1 }}
       className="group relative"
     >
-      <Link to={`/anime/${anime.id}`} className="block relative aspect-[2/3] rounded-xl overflow-hidden bg-[#1f1f2e]">
-        <img
+      <Link to={`/anime/${anime.id}`} className="block relative rounded-xl overflow-hidden bg-[#1f1f2e]">
+        <OptimizedImage
           src={anime.poster}
           alt={anime.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          loading="lazy"
+          aspectRatio="poster"
+          className="transition-transform duration-500 group-hover:scale-110"
         />
 
         {/* Gradients */}

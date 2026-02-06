@@ -12,6 +12,7 @@ import Seo from '@/components/Seo';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { apiFetch } from '@/lib/api';
+import OptimizedImage from '@/components/OptimizedImage';
 
 // Sidebar widget config type
 interface SidebarWidget {
@@ -375,11 +376,11 @@ export default function Home() {
                               setIsSearchFocused(false);
                             }}
                           >
-                            <img
+                            <OptimizedImage
                               src={anime.poster}
                               alt={anime.title}
-                              className="w-10 h-14 object-cover rounded-lg flex-shrink-0"
-                              loading="lazy"
+                              aspectRatio="poster"
+                              containerClassName="w-10 h-14 flex-shrink-0 rounded-lg overflow-hidden"
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-white font-medium text-sm line-clamp-1">{anime.title}</p>
@@ -484,11 +485,12 @@ export default function Home() {
                     className="group relative"
                   >
                     <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10">
-                      <img
+                      <OptimizedImage
                         src={anime.poster}
                         alt={anime.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
+                        aspectRatio="poster"
+                        className="group-hover:scale-105"
+                        containerClassName="w-full h-full"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-xs font-semibold">
