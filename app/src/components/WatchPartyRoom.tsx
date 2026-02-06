@@ -5,7 +5,6 @@ import {
   Send, 
   Crown, 
   LogOut, 
-  Play,
   CheckCircle2,
   Copy,
   MessageSquare
