@@ -223,8 +223,6 @@ async function getPresignedUploadUrl(key, contentType = 'video/mp4', expiresIn =
         const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn });
         const publicUrl = `${publicUrlBase}/${key}`;
 
-        console.log(`[R2] Generated presigned URL for ${bucket}: ${key}`);
-
         return {
             success: true,
             uploadUrl,
@@ -260,8 +258,6 @@ async function getSignedVideoUrl(key, expiresIn = 600, bucketType = 'video') {
         });
 
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-
-        console.log(`[R2] Generated signed URL for viewing ${bucket}: ${key} (expires in ${expiresIn}s)`);
 
         return {
             success: true,
