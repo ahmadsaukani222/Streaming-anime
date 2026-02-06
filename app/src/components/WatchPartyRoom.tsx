@@ -85,19 +85,28 @@ export default function WatchPartyRoom({
     return () => window.removeEventListener('watchparty-reaction', handleReaction as EventListener);
   }, []);
 
+  // Auto-join room if roomId provided from URL (invite link)
+  useEffect(() => {
+    if (roomId && !hasJoined && !roomData) {
+      console.log('[WatchPartyRoom] Auto-joining room from invite:', roomId);
+      setRoomIdToJoin(roomId);
+      setHasJoined(true);
+    }
+  }, [roomId]);
+
   // Join room only after user clicks button
   useEffect(() => {
     if (!roomData && isConnected && hasJoined) {
       joinRoom({
-        roomId: roomIdToJoin,
+        roomId: roomIdToJoin || roomId,
         animeId,
         episodeId,
         animeTitle,
         episodeNumber,
-        isHost: !roomIdToJoin, // Host if no roomId
+        isHost: !roomIdToJoin && !roomId, // Host if no roomId
       });
     }
-  }, [isConnected, roomData, joinRoom, roomIdToJoin, animeId, episodeId, animeTitle, episodeNumber, hasJoined]);
+  }, [isConnected, roomData, joinRoom, roomIdToJoin, roomId, animeId, episodeId, animeTitle, episodeNumber, hasJoined]);
 
   // Auto-scroll messages
   useEffect(() => {
@@ -195,8 +204,8 @@ export default function WatchPartyRoom({
     return (
       <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
         <div className="bg-[#1A1A2E] rounded-2xl p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold text-white mb-2 text-center">Watch Party</h2>
-          <p className="text-white/60 text-center mb-6">Create a room or join existing one</p>
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">Nobar</h2>
+          <p className="text-white/60 text-center mb-6">Buat room atau join room yang ada</p>
           
           <div className="space-y-4">
             {/* Join Room Section */}
@@ -205,7 +214,7 @@ export default function WatchPartyRoom({
                 type="text"
                 value={joinRoomCode}
                 onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-                placeholder="Enter room code (e.g., ABC123)"
+                placeholder="Masukkan kode room (contoh: ABC123)"
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-center text-lg uppercase tracking-wider focus:outline-none focus:border-[#6C5DD3]"
                 maxLength={6}
               />
@@ -219,7 +228,7 @@ export default function WatchPartyRoom({
                 disabled={!joinRoomCode.trim()}
                 className="w-full bg-[#6C5DD3] hover:bg-[#5B4EC2]"
               >
-                Join Room
+                Gabung Room
               </Button>
             </div>
             
@@ -240,7 +249,7 @@ export default function WatchPartyRoom({
               variant="outline"
               className="w-full border-white/20 text-white hover:bg-white/10"
             >
-              Create New Room
+              Buat Room Baru
             </Button>
             
             <Button
@@ -248,7 +257,7 @@ export default function WatchPartyRoom({
               onClick={onClose}
               className="w-full text-white/40 hover:text-white"
             >
-              Cancel
+              Batal
             </Button>
           </div>
         </div>
