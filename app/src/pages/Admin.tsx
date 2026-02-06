@@ -18,7 +18,6 @@ import {
   Loader2,
   CheckCircle2,
   Check,
-  XCircle,
   X,
   CloudUpload,
   Upload,
@@ -1065,32 +1064,6 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#0F0F1A] flex">
-      {/* Toast Notification */}
-      {toast.show && (
-        <motion.div
-          initial={{ opacity: 0, y: -50, x: '-50%' }}
-          animate={{ opacity: 1, y: 0, x: '-50%' }}
-          exit={{ opacity: 0, y: -50 }}
-          className={`fixed top-6 left-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl ${toast.type === 'success'
-            ? 'bg-green-500/20 border-green-500/30 text-green-400'
-            : 'bg-red-500/20 border-red-500/30 text-red-400'
-            }`}
-        >
-          {toast.type === 'success' ? (
-            <CheckCircle2 className="w-6 h-6 flex-shrink-0" />
-          ) : (
-            <XCircle className="w-6 h-6 flex-shrink-0" />
-          )}
-          <span className="text-white font-medium">{toast.message}</span>
-          <button
-            onClick={() => setToast({ ...toast, show: false })}
-            className="ml-2 p-1 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </motion.div>
-      )}
-
       {/* Sidebar Overlay (Mobile) */}
       {sidebarOpen && (
         <div
