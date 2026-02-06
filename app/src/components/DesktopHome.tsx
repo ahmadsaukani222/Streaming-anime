@@ -1,6 +1,6 @@
 // DesktopHome - Minimalist layout for desktop
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, X, ChevronRight, TrendingUp, Clock, Star, Calendar, Play, ChevronLeft } from 'lucide-react';
+import { Search, X, ChevronRight, TrendingUp, Clock, Star, Calendar, Play, ChevronLeft, Bookmark } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import type { Anime } from '@/data/animeData';
@@ -27,11 +27,10 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
   const [tooltipPosition, setTooltipPosition] = useState<'right' | 'left'>('right');
 
   const handleMouseEnter = () => {
-    // Determine if card is near right edge
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const windowWidth = window.innerWidth;
-      const isNearRightEdge = rect.right + 320 > windowWidth; // 320 is tooltip width
+      const isNearRightEdge = rect.right + 380 > windowWidth;
       setTooltipPosition(isNearRightEdge ? 'left' : 'right');
     }
     setIsHovered(true);
@@ -49,106 +48,144 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
     >
       <Link to={`/anime/${anime.id}`} className="block">
         {/* Poster */}
-        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-white/5">
+        <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
           <OptimizedImage
             src={anime.poster}
             alt={anime.title}
             aspectRatio="poster"
-            className="transition-all duration-500 group-hover:scale-105"
+            className="transition-all duration-500 group-hover:scale-110"
           />
           
           {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Play className="w-5 h-5 text-white fill-current" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+            <div className="w-14 h-14 rounded-full bg-[#6C5DD3] flex items-center justify-center shadow-lg shadow-[#6C5DD3]/30 transform scale-90 group-hover:scale-100 transition-transform">
+              <Play className="w-6 h-6 text-white fill-current ml-0.5" />
             </div>
           </div>
 
           {/* Status badge */}
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-2.5 left-2.5">
             <StatusBadge status={anime.status} variant="solid" />
           </div>
 
           {/* Rating */}
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded">
-            <Star className="w-3 h-3 text-yellow-400 fill-current" />
-            <span className="text-[10px] font-medium text-white">{anime.rating}</span>
+          <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg">
+            <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+            <span className="text-xs font-semibold text-white">{anime.rating}</span>
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="mt-2 text-sm font-medium text-white/90 line-clamp-1 group-hover:text-white transition-colors">
+        <h3 className="mt-3 text-sm font-semibold text-white/90 line-clamp-1 group-hover:text-white transition-colors">
           {anime.title}
         </h3>
-        <p className="text-xs text-white/40 mt-0.5">{anime.episodes} Episodes</p>
+        <p className="text-xs text-white/40 mt-1">{anime.episodes} Episodes</p>
       </Link>
 
-      {/* Hover Detail Tooltip */}
+      {/* Hover Detail Tooltip - Enhanced Design */}
       {isHovered && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, x: tooltipPosition === 'right' ? -10 : 10 }}
+          initial={{ opacity: 0, scale: 0.9, x: tooltipPosition === 'right' ? -20 : 20 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className={`absolute top-0 ${tooltipPosition === 'right' ? 'left-full ml-3' : 'right-full mr-3'} z-50 w-[280px]`}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+          className={`absolute top-0 ${tooltipPosition === 'right' ? 'left-full ml-4' : 'right-full mr-4'} z-50 w-[360px]`}
           style={{ pointerEvents: 'none' }}
         >
-          <div className="bg-[#1A1A2E]/98 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl p-4">
-            {/* Header */}
-            <div className="flex items-start gap-3 mb-3">
-              <div className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                <OptimizedImage
-                  src={anime.poster}
-                  alt={anime.title}
-                  aspectRatio="poster"
-                />
+          <div className="bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+            {/* Banner Image */}
+            <div className="relative h-32 overflow-hidden">
+              <img 
+                src={anime.banner || anime.poster} 
+                alt="" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A2E] via-[#1A1A2E]/50 to-transparent" />
+              
+              {/* Status badge on banner */}
+              <div className="absolute top-3 left-3">
+                <StatusBadge status={anime.status} variant="solid" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white line-clamp-2 mb-1">
-                  {anime.title}
-                </h4>
-                <p className="text-xs text-white/50 mb-2">{anime.titleJp || ''}</p>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-xs text-yellow-400">
-                    <Star className="w-3 h-3 fill-current" />
-                    {anime.rating}
-                  </span>
-                  <span className="text-white/30">•</span>
-                  <span className="text-xs text-white/50">{anime.releasedYear}</span>
+              
+              {/* Play button */}
+              <div className="absolute bottom-3 right-3">
+                <div className="w-12 h-12 rounded-full bg-[#6C5DD3] flex items-center justify-center shadow-lg shadow-[#6C5DD3]/40">
+                  <Play className="w-5 h-5 text-white fill-current ml-0.5" />
                 </div>
               </div>
             </div>
 
-            {/* Meta Info */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <StatusBadge status={anime.status} variant="subtle" className="!text-[10px] !px-2 !py-1" />
-              <span className="text-[10px] px-2 py-1 rounded-full bg-white/10 text-white/60">
-                {anime.episodes} Episodes
-              </span>
-              <span className="text-[10px] px-2 py-1 rounded-full bg-white/10 text-white/60">
-                {anime.studio}
-              </span>
-            </div>
+            {/* Content */}
+            <div className="p-5">
+              {/* Title Section */}
+              <div className="mb-4">
+                <h4 className="text-lg font-bold text-white leading-tight mb-1">
+                  {anime.title}
+                </h4>
+                {anime.titleJp && (
+                  <p className="text-sm text-white/40">{anime.titleJp}</p>
+                )}
+              </div>
 
-            {/* Genres */}
-            <div className="flex flex-wrap gap-1 mb-3">
-              {anime.genres.slice(0, 4).map((genre) => (
-                <span key={genre} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/50 rounded">
-                  {genre}
+              {/* Meta Info Row */}
+              <div className="flex items-center gap-4 mb-4 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="font-semibold text-white">{anime.rating}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-white/60">
+                  <Calendar className="w-4 h-4" />
+                  <span>{anime.releasedYear}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-white/60">
+                  <Clock className="w-4 h-4" />
+                  <span>{anime.episodes} EP</span>
+                </div>
+              </div>
+
+              {/* Studio & Type */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
+                  {anime.studio}
                 </span>
-              ))}
-            </div>
+                {anime.type && (
+                  <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
+                    {anime.type}
+                  </span>
+                )}
+                {anime.duration && (
+                  <span className="px-3 py-1 rounded-full bg-white/5 text-white/70 text-xs">
+                    {anime.duration}
+                  </span>
+                )}
+              </div>
 
-            {/* Synopsis */}
-            <p className="text-xs text-white/60 line-clamp-3 mb-3">
-              {anime.synopsis}
-            </p>
+              {/* Genres */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {anime.genres.slice(0, 5).map((genre) => (
+                  <span 
+                    key={genre} 
+                    className="px-2.5 py-1 rounded-md bg-[#6C5DD3]/10 text-[#B7ABFF] text-xs font-medium border border-[#6C5DD3]/20"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
 
-            {/* Watch Button */}
-            <div className="flex items-center gap-2">
-              <span className="flex-1 text-center py-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white text-xs font-medium rounded-lg transition-colors">
-                Tonton Sekarang
-              </span>
+              {/* Synopsis */}
+              <p className="text-sm text-white/60 line-clamp-4 mb-5 leading-relaxed">
+                {anime.synopsis}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3">
+                <span className="flex-1 text-center py-2.5 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#6C5DD3]/20">
+                  Tonton Sekarang
+                </span>
+                <span className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 transition-colors">
+                  <Bookmark className="w-5 h-5" />
+                </span>
+              </div>
             </div>
           </div>
         </motion.div>
