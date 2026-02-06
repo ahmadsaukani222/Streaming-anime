@@ -11,16 +11,20 @@ const resolveBackendUrl = (): string => {
   // 1. Check environment variable (recommended for development)
   const envUrl = import.meta.env.VITE_BACKEND_URL;
   if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
+    console.log('[API Config] Using env VITE_BACKEND_URL:', envUrl);
     return envUrl;
   }
 
   // 2. Auto-detect based on hostname (for production/staging)
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
+    const { protocol, hostname, host } = window.location;
+    console.log('[API Config] Detecting hostname:', hostname, 'protocol:', protocol);
     
     // Production domain
     if (hostname === 'animeku.xyz' || hostname === 'www.animeku.xyz') {
-      return `${protocol}//api.animeku.xyz`;
+      const prodUrl = `${protocol}//api.animeku.xyz`;
+      console.log('[API Config] Production URL:', prodUrl);
+      return prodUrl;
     }
     
     // Staging domain (optional)
@@ -33,11 +37,14 @@ const resolveBackendUrl = (): string => {
       return 'http://localhost:5000';
     }
     
-    // Default to same origin
-    return `${protocol}//${hostname}`;
+    // Default to same origin API subdomain
+    const defaultUrl = `${protocol}//api.${host}`;
+    console.log('[API Config] Default URL:', defaultUrl);
+    return defaultUrl;
   }
 
   // 3. Fallback for SSR/build time
+  console.log('[API Config] SSR fallback to localhost');
   return 'http://localhost:5000';
 };
 
@@ -127,15 +134,14 @@ export const setStoredSiteName = (name: string): void => {
  * Log configuration in development mode
  */
 export const logConfig = (): void => {
-  if (DEBUG_LOGS) {
-    console.log('🚀 [Config] Current Environment:', {
-      mode: IS_DEVELOPMENT ? 'development' : IS_PRODUCTION ? 'production' : 'unknown',
-      backendUrl: BACKEND_URL,
-      r2PublicUrl: R2_PUBLIC_URL,
-      debugLogs: DEBUG_LOGS,
-      useMockData: USE_MOCK_DATA,
-    });
-  }
+  console.log('🚀 [Config] Current Environment:', {
+    mode: IS_DEVELOPMENT ? 'development' : IS_PRODUCTION ? 'production' : 'unknown',
+    backendUrl: BACKEND_URL,
+    r2PublicUrl: R2_PUBLIC_URL,
+    debugLogs: DEBUG_LOGS,
+    useMockData: USE_MOCK_DATA,
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+  });
 };
 
 // Auto-log on import in development

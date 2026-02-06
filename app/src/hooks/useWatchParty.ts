@@ -85,6 +85,10 @@ export function useWatchParty(): UseWatchPartyReturn {
   useEffect(() => {
     if (!token) return;
 
+    // Ensure correct WebSocket protocol (wss for https)
+    const socketUrl = BACKEND_URL.replace(/^http/, 'ws');
+    logger.log('[useWatchParty] Connecting to:', socketUrl);
+    
     const socket = io(`${BACKEND_URL}/watchparty`, {
       auth: { token },
       transports: ['websocket', 'polling'],

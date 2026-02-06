@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Play,
   Pause,
@@ -30,8 +30,8 @@ import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import AnimeCard from '@/components/AnimeCard';
 import CommentSection from '@/components/CommentSection';
-import WatchPartyRoom from '@/components/WatchPartyRoom';
-import WatchPartyLobby from '@/components/WatchPartyLobby';
+import NobarRoom from '@/components/WatchPartyRoom';
+import NobarLobby from '@/components/WatchPartyLobby';
 import { apiFetch } from '@/lib/api';
 import { WatchSEO } from '@/components/Seo';
 import { VideoSchema, BreadcrumbSchema } from '@/components/SchemaOrg';
@@ -69,6 +69,8 @@ export default function Watch() {
   const id = params.id;
   const episode = params.episode;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const roomFromUrl = searchParams.get('room');
   const { animeList, updateWatchProgress, user } = useApp();
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -124,9 +126,18 @@ export default function Watch() {
   const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
-  // Watch Party State
-  const [showWatchParty, setShowWatchParty] = useState(false);
-  const [watchPartyRoomId, setWatchPartyRoomId] = useState<string | undefined>();
+  // Nobar State
+  const [showNobar, setShowNobar] = useState(false);
+  const [nobarRoomId, setNobarRoomId] = useState<string | undefined>();
+
+  // Auto-join room from URL query param
+  useEffect(() => {
+    if (roomFromUrl && !nobarRoomId) {
+      setNobarRoomId(roomFromUrl);
+      setShowNobar(true);
+      logger.log('[Watch] Auto-joining room from URL:', roomFromUrl);
+    }
+  }, [roomFromUrl]);
 
   useEffect(() => {
     // Scroll to top
@@ -732,7 +743,7 @@ export default function Watch() {
       <div className={`mx-auto px-4 sm:px-6 lg:px-8 pt-20 transition-all duration-300 ${isTheaterMode ? 'max-w-full' : 'max-w-7xl'}`}>
         <div className={`grid gap-4 ${isTheaterMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-4'}`}>
           {/* Video Player - 3 columns (or full width in theater mode) */}
-          <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-3'} ${showWatchParty ? 'hidden' : ''}`}>
+          <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-3'} ${showNobar ? 'hidden' : ''}`}>
             <div className="relative bg-black rounded-xl overflow-hidden">
               {/* Back Button */}
               <Link
@@ -842,11 +853,11 @@ export default function Watch() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
-                          onClick={() => setShowWatchParty(true)}
+                          onClick={() => setShowNobar(true)}
                           className="flex items-center gap-2 px-3 py-1.5 bg-[#6C5DD3]/80 hover:bg-[#6C5DD3] text-white rounded-lg text-sm transition-colors"
                         >
                           <Users className="w-4 h-4" />
-                          <span className="hidden sm:inline">Watch Party</span>
+                          <span className="hidden sm:inline">Nobar</span>
                         </button>
                         <button className="p-2 text-white/70 hover:text-white transition-colors">
                           <Flag className="w-4 h-4" />
@@ -1366,28 +1377,28 @@ export default function Watch() {
         </div>
       </section>
 
-      {/* Watch Party Room */}
-      {showWatchParty && anime && (
-        <WatchPartyRoom
-          roomId={watchPartyRoomId}
+      {/* Nobar Room */}
+      {showNobar && anime && (
+        <NobarRoom
+          roomId={nobarRoomId}
           animeId={anime.id}
           episodeId={`${anime.id}-ep-${currentEpisode}`}
           animeTitle={anime.title}
           episodeNumber={currentEpisode}
-          isHost={!watchPartyRoomId}
+          isHost={!nobarRoomId}
           onClose={() => {
-            setShowWatchParty(false);
-            setWatchPartyRoomId(undefined);
+            setShowNobar(false);
+            setNobarRoomId(undefined);
           }}
           videoRef={videoRef}
         />
       )}
 
-      {/* Watch Party Lobby */}
-      {showWatchParty && !anime && (
-        <WatchPartyLobby
+      {/* Nobar Lobby */}
+      {showNobar && !anime && (
+        <NobarLobby
           onJoinRoom={(roomId) => {
-            setWatchPartyRoomId(roomId);
+            setNobarRoomId(roomId);
           }}
           onCreateRoom={() => {
             navigate('/');

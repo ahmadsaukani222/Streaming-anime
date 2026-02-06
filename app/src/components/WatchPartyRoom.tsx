@@ -155,6 +155,19 @@ export default function WatchPartyRoom({
     }
   };
 
+  const copyInviteLink = () => {
+    if (roomData?.roomId) {
+      const inviteUrl = `${window.location.origin}/watch/${animeId}/${episodeNumber}?room=${roomData.roomId}`;
+      navigator.clipboard.writeText(inviteUrl);
+      // Show toast
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-[100] flex items-center gap-2';
+      toast.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Link berhasil disalin';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2000);
+    }
+  };
+
   const readyCount = participants.filter(p => p.isReady).length;
   const totalCount = participants.length;
   
@@ -276,6 +289,18 @@ export default function WatchPartyRoom({
               <span className="text-white/60 text-xs sm:text-sm hidden sm:inline">Room:</span>
               <span className="text-[#6C5DD3] font-mono font-medium text-xs sm:text-sm">{roomData.roomId}</span>
               <Copy className="w-3 h-3 sm:w-4 sm:h-4 text-white/40" />
+            </button>
+
+            {/* Copy Invite Link */}
+            <button
+              onClick={copyInviteLink}
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-[#6C5DD3]/20 hover:bg-[#6C5DD3]/30 text-[#6C5DD3] rounded-lg transition-colors"
+              title="Salin Link Invite"
+            >
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span className="text-xs sm:text-sm hidden sm:inline">Invite</span>
             </button>
 
             {/* Ready Status */}
