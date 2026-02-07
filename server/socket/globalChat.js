@@ -22,7 +22,15 @@ async function containsBannedWord(text) {
 const onlineUsers = new Map(); // socketId -> { userId, username, avatar }
 
 function initializeGlobalChatSocket(io) {
-  const globalChatNamespace = io.of('/globalchat');
+  // Try namespace first, fallback to default namespace for iOS compatibility
+  let globalChatNamespace;
+  try {
+    globalChatNamespace = io.of('/globalchat');
+    console.log('[GlobalChat] Namespace /globalchat created');
+  } catch (err) {
+    console.error('[GlobalChat] Failed to create namespace:', err);
+    return;
+  }
   
   // Handle connection errors for iOS debugging
   globalChatNamespace.on('connect_error', (err) => {
@@ -31,13 +39,15 @@ function initializeGlobalChatSocket(io) {
 
   globalChatNamespace.use(async (socket, next) => {
     try {
-      const auth = socket.handshake.auth || {};
+      // Support both auth object and query params (for iOS compatibility)
+      const auth = socket.handshake.auth || socket.handshake.query || {};
       const token = auth.token;
       
       console.log('[GlobalChat] Auth attempt:', { 
         hasToken: !!token, 
         hasUserId: !!auth.userId,
-        username: auth.username 
+        username: auth.username,
+        query: Object.keys(socket.handshake.query || {})
       });
       
       if (token) {
