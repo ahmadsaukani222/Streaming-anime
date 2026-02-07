@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Search, Calendar, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useApp } from '@/context/AppContext';
+
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home', isSearch: false },
@@ -13,7 +13,7 @@ const navItems = [
 
 export default function BottomNav() {
   const location = useLocation();
-  const { user } = useApp();
+
 
   // Don't show on certain pages
   const hideOnPaths = ['/watch', '/login', '/register'];
@@ -83,9 +83,7 @@ export default function BottomNav() {
                 );
               }
               
-              const targetPath = item.label === 'Jadwal' && !user 
-                ? '/login' 
-                : item.path;
+              const targetPath = item.path;
 
               return (
                 <Link
