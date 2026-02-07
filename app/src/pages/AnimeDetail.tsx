@@ -580,8 +580,8 @@ export default function AnimeDetail() {
               </div>
             </div>
 
-            {/* ===== DESKTOP LAYOUT (hidden on mobile) ===== */}
-            {/* Poster - Desktop */}
+            {/* ===== TABLET LAYOUT (sm only) ===== */}
+            {/* Poster - Tablet */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -671,6 +671,228 @@ export default function AnimeDetail() {
                 >
                   {isInWatchlist ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 </button>
+              </div>
+            </motion.div>
+
+            {/* ===== DESKTOP LAYOUT (lg and up) ===== */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="hidden lg:flex gap-8 items-start w-full"
+            >
+              {/* Poster - Large */}
+              <div className="relative flex-shrink-0 w-56 xl:w-64">
+                <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-[#6C5DD3]/40 via-[#00C2FF]/25 to-transparent blur-2xl opacity-90" />
+                <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10">
+                  <img
+                    src={anime.poster}
+                    alt={anime.title}
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    fetchPriority="high"
+                  />
+                </div>
+              </div>
+
+              {/* Info - Desktop */}
+              <div className="flex-1 min-w-0 py-2">
+                <h1 className="text-4xl xl:text-5xl font-bold font-heading text-white mb-2 leading-tight">
+                  {anime.title}
+                </h1>
+                {anime.titleJp && (
+                  <p className="text-white/50 text-base lg:text-lg mb-4 line-clamp-1">{anime.titleJp}</p>
+                )}
+
+                {/* Rating */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm font-bold rounded-full border border-yellow-500/30">
+                    <Star className="w-4 h-4 fill-current" />
+                    {anime.rating}
+                  </span>
+                  <span className="text-sm text-white/50">
+                    {anime.episodes} Episodes • {anime.releasedYear}
+                  </span>
+                </div>
+
+                {/* Info Cards - Horizontal Row */}
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Film className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[10px] uppercase tracking-wide">Episode</p>
+                      <p className="text-white font-semibold text-sm">{episodeNumbers.length} <span className="text-white/40">/ {anime.episodes}</span></p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[10px] uppercase tracking-wide">Rilis</p>
+                      <p className="text-white font-semibold text-sm">{anime.releasedYear}</p>
+                    </div>
+                  </div>
+                  
+                  {anime.duration && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                      <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase tracking-wide">Durasi</p>
+                        <p className="text-white font-semibold text-sm">{anime.duration}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {anime.studio && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                      <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                        <Building2 className="w-4 h-4 text-pink-400" />
+                      </div>
+                      <div>
+                        <p className="text-white/40 text-[10px] uppercase tracking-wide">Studio</p>
+                        <p className="text-white font-semibold text-sm line-clamp-1 max-w-[100px]">{anime.studio}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Schedule + Genres */}
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  {jadwalRilis && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-200 text-xs">
+                      <Calendar className="w-3.5 h-3.5 text-green-400" />
+                      <span>Tayang {jadwalRilis.hari}</span>
+                      <span className="text-green-300/70">•</span>
+                      <span className="font-semibold">{jadwalRilis.jam}</span>
+                    </span>
+                  )}
+                  {anime.genres.slice(0, 4).map((genre) => (
+                    <Link
+                      key={genre}
+                      to={`/genres?genre=${genre}`}
+                      className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white/80 text-xs rounded-full transition-all border border-white/10"
+                    >
+                      {genre}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3">
+                  <Link
+                    to={`/watch/${anime.id}/${lastWatched?.episodeNumber || 1}`}
+                    className="inline-flex items-center gap-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white font-medium text-sm px-6 py-3 rounded-xl transition-all shadow-lg shadow-[#6C5DD3]/25"
+                  >
+                    <Play className="w-5 h-5 fill-current" />
+                    <span>{lastWatched ? `Lanjut EP ${lastWatched.episodeNumber}` : 'Tonton Sekarang'}</span>
+                  </Link>
+
+                  <button
+                    onClick={() => toggleBookmark(anime.id)}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      isBookmarked 
+                        ? 'bg-[#6C5DD3]/20 border-[#6C5DD3]/50 text-white' 
+                        : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {isBookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                  </button>
+
+                  <button
+                    onClick={() => toggleWatchlist(anime.id)}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      isInWatchlist 
+                        ? 'bg-green-500/20 border-green-500/50 text-green-400' 
+                        : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {isInWatchlist ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  </button>
+
+                  {anime.status === 'Ongoing' && (
+                    <button
+                      onClick={toggleNotify}
+                      disabled={notifyLoading}
+                      className={`p-3 rounded-xl border transition-all ${
+                        notifyEnabled 
+                          ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400' 
+                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                      } ${notifyLoading ? 'opacity-50 cursor-wait' : ''}`}
+                      title={notifyEnabled ? 'Notifikasi Aktif' : 'Aktifkan Notifikasi'}
+                    >
+                      {notifyLoading ? (
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Bell className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
+
+                  <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                    <DialogTrigger asChild>
+                      <button className="p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all">
+                        <Share2 className="w-5 h-5" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-[#1A1A2E] border-white/10">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Bagikan Anime</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 mt-4">
+                        <div className="flex gap-3">
+                          <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#1DA1F2]/20 hover:bg-[#1DA1F2]/30 text-[#1DA1F2] rounded-xl transition-colors">
+                            <Twitter className="w-5 h-5" />
+                            Twitter
+                          </button>
+                          <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] rounded-xl transition-colors">
+                            <MessageCircle className="w-5 h-5" />
+                            WhatsApp
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            value={`${window.location.origin}/anime/${anime.id}`}
+                            readOnly
+                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                          />
+                          <Button className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* User Rating */}
+                <div className="mt-5 flex items-center gap-3">
+                  <span className="text-white/50 text-sm">Rating Anda:</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleRating(star)}
+                        className="transition-transform hover:scale-110 p-0.5"
+                      >
+                        <Star
+                          className={`w-5 h-5 transition-colors ${star <= (hoverRating || userRating)
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-white/20'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {userRating > 0 && (
+                    <span className="text-yellow-400 font-semibold text-sm">{userRating}/10</span>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
