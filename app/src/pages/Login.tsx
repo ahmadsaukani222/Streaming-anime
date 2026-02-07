@@ -6,6 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { DEFAULT_SITE_NAME } from '../config/api';
 import { StaticPageSEO } from '@/components/Seo';
+import TurnstileWidget from '@/components/TurnstileWidget';
 
 interface ValidationErrors {
   email?: string;
@@ -24,6 +25,7 @@ export default function Login() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [attempts, setAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   
   // Site settings (logo dinamis)
   const [siteName, setSiteName] = useState(DEFAULT_SITE_NAME);
@@ -98,9 +100,28 @@ export default function Login() {
     // Validate
     if (!validateForm()) return;
     
+    // Verify Turnstile
+    if (!turnstileToken) {
+      setError('Silakan verifikasi bahwa Anda bukan robot.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
+      // Verify Turnstile token with backend
+      const verifyRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-turnstile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: turnstileToken })
+      });
+      
+      if (!verifyRes.ok) {
+        setError('Verifikasi keamanan gagal. Silakan coba lagi.');
+        setTurnstileToken('');
+        return;
+      }
+      
       const success = await login(email, password);
       if (success) {
         // Handle remember me
@@ -308,16 +329,26 @@ export default function Login() {
               </Link>
             </div>
 
+            {/* Turnstile Verification */}
+            <div className="flex justify-center py-2">
+              <TurnstileWidget 
+                onVerify={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken('')}
+              />
+            </div>
+
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isLoading || !!isLockedOut}
+              disabled={isLoading || !!isLockedOut || !turnstileToken}
               className="w-full py-3 bg-gradient-to-r from-[#6C5DD3] to-[#00C2FF] hover:opacity-90 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : isLockedOut ? (
                 `Tunggu ${getLockoutRemaining()} detik`
+              ) : !turnstileToken ? (
+                'Verifikasi terlebih dahulu'
               ) : (
                 <>
                   Masuk
