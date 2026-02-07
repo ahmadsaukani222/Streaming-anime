@@ -284,10 +284,10 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Mobile Menu Button - Hidden (using BottomNav instead) */}
+              {/* Mobile Menu Button - Only on small screens */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="hidden lg:block p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                className="lg:hidden p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
               >
                 {isMobileMenuOpen ? (
                   <X className="w-5 h-5 text-white" />

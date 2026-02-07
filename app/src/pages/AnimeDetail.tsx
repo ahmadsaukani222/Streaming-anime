@@ -61,7 +61,7 @@ export default function AnimeDetail() {
     getWatchedEpisodes,
     toggleEpisodeWatched,
   } = useApp();
-  const [episodeView, setEpisodeView] = useState<'compact' | 'comfy'>('comfy');
+  const [episodeView, setEpisodeView] = useState<'compact' | 'comfy' | 'list'>('list');
   const [episodeFilter, setEpisodeFilter] = useState<'all' | 'unwatched' | 'watched' | 'latest'>('all');
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [isMobile, setIsMobile] = useState(false);
@@ -213,7 +213,7 @@ export default function AnimeDetail() {
   }, []);
 
   useEffect(() => {
-    setEpisodeView(isMobile ? 'compact' : 'comfy');
+    setEpisodeView(isMobile ? 'compact' : 'list');
   }, [isMobile]);
 
   useEffect(() => {
@@ -745,6 +745,15 @@ export default function AnimeDetail() {
                   )}
                   <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
                     <button
+                      onClick={() => setEpisodeView('list')}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'list'
+                        ? 'bg-[#6C5DD3] text-white'
+                        : 'text-white/60 hover:text-white'
+                        }`}
+                    >
+                      List
+                    </button>
+                    <button
                       onClick={() => setEpisodeView('compact')}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'compact'
                         ? 'bg-[#6C5DD3] text-white'
@@ -809,6 +818,8 @@ export default function AnimeDetail() {
             {/* Modern Episode Grid */}
             <div className={`${episodeView === 'compact' 
               ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3' 
+              : episodeView === 'list'
+              ? 'flex flex-col gap-2'
               : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
             }`}>
               {filteredEpisodes.map((epNum) => {
@@ -834,8 +845,81 @@ export default function AnimeDetail() {
                         : 'bg-gradient-to-br from-white/10 to-white/5 border-white/10 hover:border-[#6C5DD3]/50 hover:bg-white/[0.07]'
                       }`}
                   >
-                    {/* COMPACT VIEW: Minimal Thumbnail Only */}
-                    {episodeView === 'compact' ? (
+                    {/* LIST VIEW: Horizontal List like Screenshot */}
+                    {episodeView === 'list' ? (
+                      <>
+                        <div className="flex items-center gap-4 p-3 bg-[#1A1A2E]/80 rounded-xl border border-white/10 hover:border-[#6C5DD3]/50 hover:bg-[#1A1A2E] transition-all group">
+                          {/* Thumbnail */}
+                          <div className="relative w-24 h-16 sm:w-32 sm:h-20 rounded-lg overflow-hidden flex-shrink-0">
+                            <img
+                              src={thumbnailUrl}
+                              alt={`Episode ${epNum}`}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              loading="lazy"
+                            />
+                            {/* Play overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                              <Play className="w-6 h-6 text-white" fill="white" />
+                            </div>
+                            {/* Watched indicator */}
+                            {isWatched && (
+                              <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-sm font-bold ${isLatest ? 'text-yellow-400' : 'text-[#6C5DD3]'}`}>
+                                {epNum}
+                              </span>
+                              <h4 className="text-sm font-medium text-white truncate group-hover:text-[#6C5DD3] transition-colors">
+                                {episodeTitle || `Episode ${epNum}`}
+                              </h4>
+                            </div>
+                            {(episodeData as any)?.subtitle && (
+                              <p className="text-xs text-white/50 truncate">{(episodeData as any).subtitle}</p>
+                            )}
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-white/40">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {anime.duration || '24 min'}
+                              </span>
+                              {(episodeData as any)?.aired && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date((episodeData as any).aired).toLocaleDateString('id-ID')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Right side - Status & Watch Toggle */}
+                          <div className="flex items-center gap-2">
+                            {isLatest && (
+                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded-full">
+                                NEW
+                              </span>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleToggleEpisodeWatched(epNum);
+                              }}
+                              className={`p-2 rounded-lg transition-all ${isWatched
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                }`}
+                            >
+                              {isWatched ? <Check className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : episodeView === 'compact' ? (
                       <>
                         {/* Compact Thumbnail */}
                         <div className={`relative w-full h-full overflow-hidden ${!hasRealThumbnail ? 'bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A]' : ''}`}>
