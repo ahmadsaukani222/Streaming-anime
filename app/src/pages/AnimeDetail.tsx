@@ -28,8 +28,7 @@ import CommentSection from '@/components/CommentSection';
 import CharacterSection from '@/components/CharacterSection';
 import { AnimeDetailSEO } from '@/components/Seo';
 import { AnimeDetailSkeleton } from '@/components/skeletons/AnimeDetailSkeleton';
-import StatusBadge from '@/components/StatusBadge';
-import TypeBadge from '@/components/TypeBadge';
+
 import { AnimeSchema, BreadcrumbSchema } from '@/components/SchemaOrg';
 import {
   Dialog,
@@ -349,10 +348,6 @@ export default function AnimeDetail() {
                         loading="eager"
                         fetchPriority="high"
                       />
-                      {/* Status Badge on Poster */}
-                      <div className="absolute top-2 left-2">
-                        <StatusBadge status={anime.status} variant="solid" className="!text-[9px] !px-1.5 !py-0.5" />
-                      </div>
                       {/* Rating Badge */}
                       <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded-full">
                         <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
@@ -370,12 +365,7 @@ export default function AnimeDetail() {
                       <p className="text-white/40 text-xs mb-3 line-clamp-1">{anime.titleJp}</p>
                     )}
                     
-                    {/* Type & Studio */}
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {anime.type && (
-                        <TypeBadge type={anime.type} variant="card" className="!text-[10px] !px-2 !py-0.5" />
-                      )}
-                    </div>
+
 
                     {/* Mini Info Grid */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -623,14 +613,15 @@ export default function AnimeDetail() {
                 <p className="text-white/50 text-sm mb-3 line-clamp-1">{anime.titleJp}</p>
               )}
 
-              {/* Meta */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              {/* Rating */}
+              <div className="flex items-center gap-2 mb-3">
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">
                   <Star className="w-3 h-3 fill-current" />
                   {anime.rating}
                 </span>
-                <StatusBadge status={anime.status} variant="subtle" className="!text-[10px] !px-2 !py-0.5" />
-                {anime.type && <TypeBadge type={anime.type} variant="card" className="!text-[10px]" />}
+                <span className="text-xs text-white/50">
+                  {anime.episodes} Episodes
+                </span>
               </div>
 
               {/* Info Pills */}
