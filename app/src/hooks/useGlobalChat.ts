@@ -69,8 +69,15 @@ export function useGlobalChat(): UseGlobalChatReturn {
       console.log('[GlobalChat] Connecting as guest');
     }
 
-    const socket = io(`${BACKEND_URL}/globalchat`, {
-      auth,
+    // iOS Safari fix: Use path instead of namespace for better compatibility
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    const socket = io(BACKEND_URL, {
+      path: '/socket.io',
+      query: { 
+        ns: 'globalchat',
+        ...auth 
+      },
       transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -78,9 +85,8 @@ export function useGlobalChat(): UseGlobalChatReturn {
       reconnectionDelayMax: 5000,
       timeout: 20000,
       withCredentials: true,
-      // iOS Safari specific fixes
       forceNew: true,
-      multiplex: false,
+      multiplex: !isIOS, // Disable multiplexing on iOS
     });
 
     socketRef.current = socket;
