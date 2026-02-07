@@ -1,60 +1,68 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { ImageIcon, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useEffect, useRef } from 'react';
 
 interface OptimizedImageProps {
   src: string;
   alt: string;
   className?: string;
-  containerClassName?: string;
-  aspectRatio?: 'poster' | 'banner' | 'square' | 'video' | 'avatar' | 'custom';
-  customAspect?: string;
+  loading?: 'lazy' | 'eager';
   priority?: boolean;
-  objectFit?: 'cover' | 'contain' | 'fill';
-  blurHash?: string;
-  fallbackSrc?: string;
+  aspectRatio?: 'poster' | 'banner' | 'square' | 'video';
+  containerClassName?: string;
   onLoad?: () => void;
   onError?: () => void;
-  sizes?: string;
 }
 
-// Aspect ratio mappings
-const aspectRatios = {
-  poster: 'aspect-[2/3]',      // 2:3 - Anime poster
-  banner: 'aspect-[16/9]',     // 16:9 - Hero banner
-  square: 'aspect-square',     // 1:1 - Avatars
-  video: 'aspect-video',       // 16:9 - Video thumbnails
-  avatar: 'aspect-square',     // 1:1 - User avatars
-  custom: '',                  // Custom aspect ratio
-};
+// Convert image URL to WebP version
+function getWebPUrl(originalUrl: string): string {
+  if (!originalUrl) return '';
+  
+  // Skip if already WebP/AVIF or data URL
+  if (originalUrl.endsWith('.webp') || originalUrl.endsWith('.avif') || originalUrl.startsWith('data:')) {
+    return originalUrl;
+  }
+  
+  // Replace extension with .webp
+  return originalUrl.replace(/\.(jpg|jpeg|png|gif)$/i, '.webp');
+}
 
-
+// Get aspect ratio class
+function getAspectRatioClass(ratio: string): string {
+  switch (ratio) {
+    case 'poster':
+      return 'aspect-[2/3]';
+    case 'banner':
+      return 'aspect-[16/9]';
+    case 'square':
+      return 'aspect-square';
+    case 'video':
+      return 'aspect-video';
+    default:
+      return '';
+  }
+}
 
 export default function OptimizedImage({
   src,
   alt,
-  className,
-  containerClassName,
-  aspectRatio = 'poster',
-  customAspect,
+  className = '',
+  loading = 'lazy',
   priority = false,
-  objectFit = 'cover',
-  blurHash,
-  fallbackSrc,
+  aspectRatio,
+  containerClassName = '',
   onLoad,
   onError,
-  sizes = '100vw',
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState(src);
-  const [isInView, setIsInView] = useState(priority);
+  const [isInView, setIsInView] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
-    if (priority || isInView) return;
+    if (priority || loading === 'eager') {
+      setIsInView(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -74,158 +82,61 @@ export default function OptimizedImage({
     }
 
     return () => observer.disconnect();
-  }, [priority]);
+  }, [priority, loading]);
 
-  // Handle image load
-  const handleLoad = useCallback(() => {
+  const handleLoad = () => {
     setIsLoaded(true);
     onLoad?.();
-  }, [onLoad]);
+  };
 
-  // Handle image error
-  const handleError = useCallback(() => {
-    if (fallbackSrc && currentSrc !== fallbackSrc) {
-      setCurrentSrc(fallbackSrc);
-    } else {
-      setHasError(true);
-      onError?.();
-    }
-  }, [currentSrc, fallbackSrc, onError]);
+  const handleError = () => {
+    setHasError(true);
+    onError?.();
+  };
 
-  // Retry loading
-  const handleRetry = useCallback(() => {
-    setHasError(false);
-    setIsLoaded(false);
-    setCurrentSrc(src + '?retry=' + Date.now());
-  }, [src]);
-
-  // Generate srcSet for responsive images
-  const generateSrcSet = useCallback(() => {
-    if (!src || src.startsWith('data:')) return undefined;
-    
-    // If it's already a processed image from CDN, don't add srcSet
-    if (src.includes('cloudflare') || src.includes('r2')) {
-      return undefined;
-    }
-
-    return undefined; // Disable for now until we have image CDN
-  }, [src]);
-
-  const objectFitClass = {
-    cover: 'object-cover',
-    contain: 'object-contain',
-    fill: 'object-fill',
-  }[objectFit];
-
-  const aspectClass = aspectRatio === 'custom' && customAspect 
-    ? '' 
-    : aspectRatios[aspectRatio];
-
-  const customStyle = aspectRatio === 'custom' && customAspect
-    ? { aspectRatio: customAspect }
-    : undefined;
-
-  // Error state
-  if (hasError) {
-    return (
-      <div
-        ref={containerRef}
-        className={cn(
-          'relative overflow-hidden bg-[#1A1A2E] flex flex-col items-center justify-center gap-2',
-          aspectClass,
-          containerClassName
-        )}
-        style={customStyle}
-      >
-        <AlertCircle className="w-8 h-8 text-white/20" />
-        <span className="text-xs text-white/40 text-center px-4">
-          Gagal memuat gambar
-        </span>
-        <button
-          onClick={handleRetry}
-          className="px-3 py-1 text-xs bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-full transition-colors"
-        >
-          Coba Lagi
-        </button>
-      </div>
-    );
-  }
+  const webpSrc = getWebPUrl(src);
 
   return (
     <div
       ref={containerRef}
-      className={cn(
-        'relative overflow-hidden bg-[#1A1A2E]',
-        aspectClass,
-        containerClassName
-      )}
-      style={customStyle}
+      className={`relative overflow-hidden bg-[#1A1A2E] ${
+        aspectRatio ? getAspectRatioClass(aspectRatio) : ''
+      } ${containerClassName}`}
     >
-      {/* Blur Placeholder */}
-      {!isLoaded && (
-        <div 
-          className={cn(
-            'absolute inset-0 bg-gradient-to-br from-[#252538] to-[#1A1A2E] animate-pulse',
-            className
-          )}
-        >
-          {/* Shimmer effect */}
-          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+      {/* Loading placeholder */}
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A2E] to-[#0F0F1A] animate-pulse" />
+      )}
+
+      {/* Picture element - browser automatically picks best format */}
+      {(isInView || priority) && !hasError && (
+        <picture>
+          {/* WebP version */}
+          <source 
+            srcSet={webpSrc} 
+            type="image/webp" 
+          />
+          {/* Original format as fallback */}
+          <img
+            src={src}
+            alt={alt}
+            loading={loading}
+            decoding={priority ? 'sync' : 'async'}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            } ${className}`}
+          />
+        </picture>
+      )}
+
+      {/* Error state */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1A1A2E]">
+          <span className="text-white/30 text-xs text-center px-2">{alt || 'Image'}</span>
         </div>
-      )}
-
-      {/* Loading spinner */}
-      {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <ImageIcon className="w-6 h-6 text-white/10" />
-        </div>
-      )}
-
-      {/* Actual Image */}
-      {(isInView || priority) && (
-        <img
-          ref={imageRef}
-          src={currentSrc}
-          alt={alt}
-          loading={priority ? 'eager' : 'lazy'}
-          decoding={priority ? 'sync' : 'async'}
-          srcSet={generateSrcSet()}
-          sizes={sizes}
-          onLoad={handleLoad}
-          onError={handleError}
-          className={cn(
-            'w-full h-full transition-all duration-500',
-            objectFitClass,
-            isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-105 blur-sm',
-            className
-          )}
-        />
-      )}
-
-      {/* Low Quality Image Placeholder (LQIP) */}
-      {blurHash && !isLoaded && (
-        <img
-          src={blurHash}
-          alt=""
-          aria-hidden="true"
-          className={cn(
-            'absolute inset-0 w-full h-full object-cover blur-xl scale-110',
-            objectFitClass
-          )}
-        />
       )}
     </div>
   );
 }
-
-// Preload critical images
-export function preloadImage(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve();
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-
