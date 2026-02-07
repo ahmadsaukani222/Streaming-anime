@@ -7,8 +7,7 @@ import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import ScheduleWidget from '@/components/ScheduleWidget';
-import StatusBadge from '@/components/StatusBadge';
-import TypeBadge from '@/components/TypeBadge';
+
 import type { SidebarWidget } from '@/types';
 
 interface DesktopHomeProps {
@@ -64,16 +63,8 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
             </div>
           </div>
 
-          {/* Status & Type badges - Horizontal */}
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-            <StatusBadge status={anime.status} variant="solid" />
-            {anime.type && (
-              <TypeBadge type={anime.type} variant="card" />
-            )}
-          </div>
-
-          {/* Rating */}
-          <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg">
+          {/* Rating - Top Right */}
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg">
             <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
             <span className="text-xs font-semibold text-white">{anime.rating}</span>
           </div>
@@ -106,13 +97,7 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A2E] via-[#1A1A2E]/50 to-transparent" />
               
-              {/* Status & Type badges - Horizontal */}
-              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                <StatusBadge status={anime.status} variant="solid" />
-                {anime.type && (
-                  <TypeBadge type={anime.type} variant="card" />
-                )}
-              </div>
+
               
               {/* Play button */}
               <div className="absolute bottom-2.5 right-2.5">

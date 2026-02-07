@@ -4,8 +4,7 @@ import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import { MotionDiv } from '@/components/MotionWrapper';
-import StatusBadge from '@/components/StatusBadge';
-import TypeBadge from '@/components/TypeBadge';
+
 
 interface AnimeCardProps {
   anime: Anime;
@@ -80,15 +79,10 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
-          {/* Rating Badge */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-[2px] sm:backdrop-blur-sm rounded-lg">
+          {/* Rating Badge - Bottom Right */}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg">
             <Star className="w-3 h-3 text-yellow-400 fill-current" />
             <span className="text-xs font-semibold text-white">{anime.rating}</span>
-          </div>
-
-          {/* Status Badge */}
-          <div className="absolute top-2 left-2">
-            <StatusBadge status={anime.status} variant="solid" />
           </div>
 
           {/* Content */}
@@ -129,26 +123,11 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent opacity-60" />
 
-        {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2">
-          {/* Status & Type Badges - Horizontal */}
-          <div className="flex items-center gap-1.5">
-            {anime.status && (
-              <StatusBadge 
-                status={anime.status} 
-                variant="solid" 
-                className="text-[10px] font-bold uppercase tracking-wide rounded-md shrink-0 !px-2 !py-0.5"
-              />
-            )}
-            {anime.type && (
-              <TypeBadge type={anime.type} variant="card" />
-            )}
-          </div>
-
-          {/* Rating Badge */}
-          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-black/70 backdrop-blur-[2px] sm:backdrop-blur-md rounded-md border border-white/10 shrink-0">
-            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            <span className="text-[10px] font-bold text-white">{anime.rating?.toFixed(2) || '0.00'}</span>
+        {/* Rating Badge - Top Right */}
+        <div className="absolute top-2.5 right-2.5">
+          <div className="flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md border border-white/10">
+            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="text-xs font-bold text-white">{anime.rating?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
 
