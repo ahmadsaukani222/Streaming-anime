@@ -129,6 +129,7 @@ app.use('/api/schedule-subscriptions', require('./routes/scheduleSubscription'))
 app.use('/api/reviews', require('./routes/review'));
 app.use('/api/badges', require('./routes/badge'));
 app.use('/api/watchparty', require('./routes/watchParty'));
+app.use('/api', require('./routes/turnstile'));
 
 app.get('/', (req, res) => {
     // Check if request is from browser (wants HTML)
