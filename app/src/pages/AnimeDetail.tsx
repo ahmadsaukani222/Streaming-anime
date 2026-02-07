@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Play,
@@ -12,13 +12,14 @@ import {
   ChevronLeft,
   Share2,
   Bell,
-  BellOff,
   Eye,
   EyeOff,
   Twitter,
   MessageCircle,
   Copy,
-  Search
+  Search,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -68,7 +69,6 @@ export default function AnimeDetail() {
   const [notifyEnabled, setNotifyEnabled] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const actionsRef = useRef<HTMLDivElement | null>(null);
 
   const anime = id ? animeList.find(a => a.id === id) : undefined;
   const isBookmarked = id ? bookmarks.includes(id) : false;
@@ -213,7 +213,7 @@ export default function AnimeDetail() {
   }, []);
 
   useEffect(() => {
-    setEpisodeView(isMobile ? 'compact' : 'list');
+    setEpisodeView('list');
   }, [isMobile]);
 
   useEffect(() => {
@@ -315,283 +315,265 @@ export default function AnimeDetail() {
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-6">
           {/* Mobile: Stacked Layout | Desktop: Side by Side */}
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-center sm:items-start w-full">
-            {/* Poster - Mobile: Larger & Centered */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative flex-shrink-0 w-40 sm:w-40 lg:w-56 aspect-[3/4]"
-            >
-              <div className="absolute -inset-2 sm:-inset-3 rounded-2xl bg-gradient-to-br from-[#6C5DD3]/35 via-[#00C2FF]/20 to-transparent blur-2xl opacity-90" />
-              <div className="relative w-full h-full rounded-2xl sm:rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10">
-                <img
-                  src={anime.poster}
-                  alt={anime.title}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-                {/* Mobile: Badges on Poster */}
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 sm:hidden">
-                  <StatusBadge status={anime.status} variant="solid" className="!text-[10px] !px-2 !py-0.5" />
-                  {anime.type && (
-                    <TypeBadge type={anime.type} variant="card" className="!text-[10px] !px-2 !py-0.5" />
-                  )}
+          <div className="flex flex-col lg:flex-row gap-5 lg:gap-10 items-center lg:items-start w-full">
+            
+            {/* ===== MOBILE LAYOUT ===== */}
+            {/* Mobile: Poster Section - Full Width Card Style */}
+            <div className="w-full sm:hidden">
+              {/* Poster with Background Blur Effect */}
+              <div className="relative">
+                {/* Background Blur Image */}
+                <div className="absolute inset-x-0 -top-4 h-48 overflow-hidden rounded-2xl">
+                  <img
+                    src={anime.poster}
+                    alt=""
+                    className="w-full h-full object-cover blur-2xl opacity-40 scale-125"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F0F1A]/60 to-[#0F0F1A]" />
                 </div>
-                {/* Mobile: Rating on Poster */}
-                <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-full sm:hidden">
-                  <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                  <span className="text-[10px] font-bold text-white">{anime.rating}</span>
+                
+                {/* Poster & Quick Info */}
+                <div className="relative flex gap-4">
+                  {/* Poster - Medium Size */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative flex-shrink-0 w-32 aspect-[3/4]"
+                  >
+                    <div className="absolute -inset-1 rounded-xl bg-gradient-to-br from-[#6C5DD3]/30 to-transparent blur-lg" />
+                    <div className="relative w-full h-full rounded-xl overflow-hidden shadow-xl border border-white/10">
+                      <img
+                        src={anime.poster}
+                        alt={anime.title}
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                        fetchPriority="high"
+                      />
+                      {/* Status Badge on Poster */}
+                      <div className="absolute top-2 left-2">
+                        <StatusBadge status={anime.status} variant="solid" className="!text-[9px] !px-1.5 !py-0.5" />
+                      </div>
+                      {/* Rating Badge */}
+                      <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded-full">
+                        <Star className="w-2.5 h-2.5 text-yellow-400 fill-current" />
+                        <span className="text-[10px] font-bold text-white">{anime.rating}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Quick Info - Beside Poster */}
+                  <div className="flex-1 flex flex-col justify-center min-w-0 py-2">
+                    <h1 className="text-lg font-bold font-heading text-white mb-1 leading-tight line-clamp-2">
+                      {anime.title}
+                    </h1>
+                    {anime.titleJp && (
+                      <p className="text-white/40 text-xs mb-3 line-clamp-1">{anime.titleJp}</p>
+                    )}
+                    
+                    {/* Type & Studio */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {anime.type && (
+                        <TypeBadge type={anime.type} variant="card" className="!text-[10px] !px-2 !py-0.5" />
+                      )}
+                    </div>
+
+                    {/* Mini Info Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-white/70">{episodeNumbers.length}/{anime.episodes} EP</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="text-white/70">{anime.releasedYear}</span>
+                      </div>
+                      {anime.duration && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-white/70">{anime.duration}</span>
+                        </div>
+                      )}
+                      {anime.studio && (
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-pink-400" />
+                          <span className="text-white/70 truncate">{anime.studio}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </motion.div>
 
-            {/* Info */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex-1 min-w-0 w-full pb-2 sm:pb-4"
-            >
-              {/* Title - Mobile: Centered & Larger */}
-              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold font-heading text-white mb-1 sm:mb-2 leading-tight line-clamp-2 text-center sm:text-left">
-                {anime.title}
-              </h1>
-              {anime.titleJp && (
-                <p className="text-white/50 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4 line-clamp-1 text-center sm:text-left">{anime.titleJp}</p>
+              {/* Schedule Badge - Full Width */}
+              {jadwalRilis && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/20"
+                >
+                  <Calendar className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-100">Tayang setiap</span>
+                  <span className="text-sm font-bold text-green-300">{jadwalRilis.hari}</span>
+                  <span className="text-green-400/60">•</span>
+                  <span className="text-sm font-semibold text-white">{jadwalRilis.jam}</span>
+                </motion.div>
               )}
 
-              {/* Meta - Desktop Only */}
-              <div className="hidden sm:flex flex-wrap items-center gap-1.5 sm:gap-3 mb-2 sm:mb-3">
-                <span className="flex items-center gap-1 px-2 sm:px-3 py-0.5 sm:py-1 bg-yellow-500/20 text-yellow-400 text-[10px] sm:text-xs font-bold rounded-full">
-                  <Star className="w-2.5 sm:w-3 h-2.5 sm:h-3 fill-current" />
-                  {anime.rating}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <StatusBadge status={anime.status} variant="subtle" className="!px-2 sm:!px-3 !py-0.5 sm:!py-1 !text-[10px] sm:!text-xs !font-bold !rounded-full" />
-                  {anime.type && (
-                    <TypeBadge type={anime.type} variant="card" className="!text-[10px] sm:!text-xs !px-2 sm:!px-3 !py-0.5 sm:!py-1" />
-                  )}
-                </div>
-              </div>
-
-              {/* Mobile: Info Pills - Horizontal Scroll */}
-              <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide mb-3">
-                <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30">
-                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
-                  <span className="text-xs font-semibold text-white">{anime.rating}</span>
-                </div>
-                <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30">
-                  <Film className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-xs font-semibold text-white">{episodeNumbers.length}/{anime.episodes} EP</span>
-                </div>
-                <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
-                  <Calendar className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="text-xs font-semibold text-white">{anime.releasedYear}</span>
-                </div>
-                {anime.duration && (
-                  <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30">
-                    <Clock className="w-3.5 h-3.5 text-green-400" />
-                    <span className="text-xs font-semibold text-white">{anime.duration}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop: Highlight Info Grid */}
-              <div className="hidden sm:grid mt-2 grid-cols-4 lg:grid-cols-5 gap-2">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                  <Star className="w-4 h-4 text-yellow-400" />
-                  <div className="text-xs">
-                    <p className="text-white/40">Rating</p>
-                    <p className="text-white font-semibold">{anime.rating}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                  <Film className="w-4 h-4 text-blue-400" />
-                  <div className="text-xs">
-                    <p className="text-white/40">Episode</p>
-                    <p className="text-white font-semibold">{episodeNumbers.length} <span className="text-white/40">/ {anime.episodes}</span></p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                  <Calendar className="w-4 h-4 text-white/70" />
-                  <div className="text-xs">
-                    <p className="text-white/40">Rilis</p>
-                    <p className="text-white font-semibold">{anime.releasedYear}</p>
-                  </div>
-                </div>
-                {anime.duration && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <Clock className="w-4 h-4 text-white/70" />
-                    <div className="text-xs">
-                      <p className="text-white/40">Durasi</p>
-                      <p className="text-white font-semibold">{anime.duration}</p>
-                    </div>
-                  </div>
-                )}
-                {anime.studio && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <Building2 className="w-4 h-4 text-white/70" />
-                    <div className="text-xs">
-                      <p className="text-white/40">Studio</p>
-                      <p className="text-white font-semibold line-clamp-1">{anime.studio}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Schedule + Genres Row */}
-              <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-4 lg:mb-6">
-                {jadwalRilis && (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-200 text-xs">
-                    <Calendar className="w-3.5 h-3.5 text-green-400" />
-                    <span className="whitespace-nowrap">Tayang {jadwalRilis.hari}</span>
-                    <span className="text-green-300/70">•</span>
-                    <span className="font-semibold whitespace-nowrap">{jadwalRilis.jam}</span>
-                  </span>
-                )}
-                {anime.genres.slice(0, 4).map((genre) => (
+              {/* Genre Pills - Horizontal Scroll */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+              >
+                {anime.genres.map((genre) => (
                   <Link
                     key={genre}
                     to={`/genres?genre=${genre}`}
-                    className="px-3 py-1 bg-gradient-to-r from-[#6C5DD3]/20 to-[#00C2FF]/20 hover:from-[#6C5DD3]/30 hover:to-[#00C2FF]/30 text-white/80 text-xs rounded-full transition-all border border-[#6C5DD3]/30"
+                    className="flex-shrink-0 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/80 text-xs rounded-full transition-all border border-white/10"
                   >
                     {genre}
                   </Link>
                 ))}
-              </div>
+              </motion.div>
 
-              {/* Actions - Mobile: Full Width */}
-              <div className="mt-4 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white/5 border border-white/10 p-2 sm:p-3" ref={actionsRef}>
+              {/* Primary Action - Full Width Big Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-4"
+              >
                 <Link
                   to={`/watch/${anime.id}/${lastWatched?.episodeNumber || 1}`}
-                  className="flex-1 sm:flex-none btn-primary flex items-center justify-center gap-2 text-sm px-4 py-3 sm:py-2.5"
+                  className="w-full flex items-center justify-center gap-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white font-semibold text-base px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-[#6C5DD3]/25 active:scale-[0.98]"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>{lastWatched ? `Lanjut EP ${lastWatched.episodeNumber}` : 'Tonton Sekarang'}</span>
+                  <span>{lastWatched ? `Lanjut Episode ${lastWatched.episodeNumber}` : 'Tonton Sekarang'}</span>
                 </Link>
+              </motion.div>
 
+              {/* Action Buttons Row */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="mt-3 grid grid-cols-4 gap-2"
+              >
+                {/* Bookmark */}
                 <button
                   onClick={() => toggleBookmark(anime.id)}
-                  className={`btn-secondary flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4 py-3 sm:py-2.5 ${isBookmarked ? 'bg-[#6C5DD3] border-[#6C5DD3]' : ''}`}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all ${
+                    isBookmarked 
+                      ? 'bg-[#6C5DD3]/20 border-[#6C5DD3]/50 text-white' 
+                      : 'bg-white/5 border-white/10 text-white/70'
+                  }`}
                 >
-                  {isBookmarked ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  <span className="hidden sm:inline">{isBookmarked ? 'Tersimpan' : 'Favorit'}</span>
+                  {isBookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                  <span className="text-[10px]">{isBookmarked ? 'Tersimpan' : 'Simpan'}</span>
                 </button>
 
-                {/* Watchlist - Desktop Only */}
+                {/* Watchlist */}
                 <button
                   onClick={() => toggleWatchlist(anime.id)}
-                  className={`hidden sm:flex btn-secondary items-center gap-2 ${isInWatchlist ? 'bg-green-500/20 border-green-500/50' : ''}`}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all ${
+                    isInWatchlist 
+                      ? 'bg-green-500/20 border-green-500/50 text-green-400' 
+                      : 'bg-white/5 border-white/10 text-white/70'
+                  }`}
                 >
                   {isInWatchlist ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  {isInWatchlist ? 'Di Watchlist' : 'Watchlist'}
+                  <span className="text-[10px]">{isInWatchlist ? 'Watchlist' : 'Watchlist'}</span>
                 </button>
 
-                {/* Notification Bell for Ongoing */}
-                {anime.status === 'Ongoing' && (
+                {/* Notification */}
+                {anime.status === 'Ongoing' ? (
                   <button
                     onClick={toggleNotify}
                     disabled={notifyLoading}
-                    className={`p-3 rounded-xl transition-colors ${notifyEnabled ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'} ${notifyLoading ? 'opacity-50 cursor-wait' : ''}`}
-                    title={notifyEnabled ? 'Notifikasi Aktif' : 'Aktifkan Notifikasi'}
+                    className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all ${
+                      notifyEnabled 
+                        ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400' 
+                        : 'bg-white/5 border-white/10 text-white/70'
+                    } ${notifyLoading ? 'opacity-50' : ''}`}
                   >
                     {notifyLoading ? (
                       <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : notifyEnabled ? (
-                      <Bell className="w-5 h-5" />
                     ) : (
-                      <BellOff className="w-5 h-5" />
+                      <Bell className="w-5 h-5" />
                     )}
+                    <span className="text-[10px]">{notifyEnabled ? 'Notif On' : 'Notif'}</span>
                   </button>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl border border-white/5 bg-white/[0.02] text-white/30">
+                    <Bell className="w-5 h-5" />
+                    <span className="text-[10px]">Notif</span>
+                  </div>
                 )}
 
-                {/* Share Dialog */}
+                {/* Share */}
                 <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                   <DialogTrigger asChild>
-                    <button className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors">
+                    <button className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl border border-white/10 bg-white/5 text-white/70 transition-all">
                       <Share2 className="w-5 h-5" />
+                      <span className="text-[10px]">Bagikan</span>
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="bg-[#1A1A2E] border-white/10">
-                    <DialogHeader>
-                      <DialogTitle className="text-white">Bagikan Anime</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      {/* Social Share Buttons */}
-                      <div className="flex gap-3">
-                        <button
-                          onClick={shareToTwitter}
-                          className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#1DA1F2]/20 hover:bg-[#1DA1F2]/30 text-[#1DA1F2] rounded-xl transition-colors"
-                        >
-                          <Twitter className="w-5 h-5" />
-                          Twitter
-                        </button>
-                        <button
-                          onClick={shareToWhatsApp}
-                          className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] rounded-xl transition-colors"
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                          WhatsApp
-                        </button>
+                    <DialogContent className="bg-[#1A1A2E] border-white/10">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Bagikan Anime</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 mt-4">
+                        {/* Social Share Buttons */}
+                        <div className="flex gap-3">
+                          <button
+                            onClick={shareToTwitter}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#1DA1F2]/20 hover:bg-[#1DA1F2]/30 text-[#1DA1F2] rounded-xl transition-colors"
+                          >
+                            <Twitter className="w-5 h-5" />
+                            Twitter
+                          </button>
+                          <button
+                            onClick={shareToWhatsApp}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] rounded-xl transition-colors"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            WhatsApp
+                          </button>
+                        </div>
+                        {/* Copy Link */}
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            value={shareUrl}
+                            readOnly
+                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                          />
+                          <Button
+                            onClick={copyLink}
+                            className={`${copied ? 'bg-green-500' : 'bg-[#6C5DD3] hover:bg-[#5a4ec0]'}`}
+                          >
+                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
                       </div>
-                      {/* Copy Link */}
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="text"
-                          value={shareUrl}
-                          readOnly
-                          className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
-                        />
-                        <Button
-                          onClick={copyLink}
-                          className={`${copied ? 'bg-green-500' : 'bg-[#6C5DD3] hover:bg-[#5a4ec0]'}`}
-                        >
-                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                    </DialogContent>
+                  </Dialog>
+                </motion.div>
 
-              {/* User Rating - Compact on mobile */}
-              <div className="mt-4 flex sm:hidden items-center gap-2 flex-wrap">
-                <span className="text-white/50 text-xs">Rating Anda:</span>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => handleRating(star)}
-                      className="transition-transform hover:scale-110"
-                      aria-label={`Beri rating ${star}`}
-                    >
-                      <Star
-                        className={`w-4 h-4 transition-colors ${star <= (hoverRating || userRating)
-                          ? 'text-yellow-400 fill-yellow-400'
-                          : 'text-white/20'
-                          }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-                {userRating > 0 && (
-                  <span className="text-yellow-400 font-medium text-xs">{userRating}/10</span>
-                )}
-              </div>
-
-              {/* User Rating - hidden on very small screens */}
-              <div className="hidden sm:flex mt-4 items-center gap-2 sm:gap-4 flex-wrap">
+              {/* User Rating */}
+              <div className="mt-4 lg:mt-5 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
                 <span className="text-white/50 text-xs sm:text-sm">Rating Anda:</span>
-                <div className="flex gap-0.5 sm:gap-1">
+                <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
                     <button
                       key={star}
                       onClick={() => handleRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      className="transition-transform hover:scale-110"
+                      className="transition-transform hover:scale-110 p-0.5"
+                      aria-label={`Beri rating ${star}`}
                     >
                       <Star
                         className={`w-4 sm:w-5 h-4 sm:h-5 transition-colors ${star <= (hoverRating || userRating)
@@ -603,11 +585,102 @@ export default function AnimeDetail() {
                   ))}
                 </div>
                 {userRating > 0 && (
-                  <span className="text-yellow-400 font-medium text-sm">{userRating}/10</span>
+                  <span className="text-yellow-400 font-semibold text-sm ml-1">{userRating}/10</span>
+                )}
+              </div>
+            </div>
+
+            {/* ===== DESKTOP LAYOUT (hidden on mobile) ===== */}
+            {/* Poster - Desktop */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="hidden sm:block lg:hidden relative flex-shrink-0 w-40"
+            >
+              <div className="absolute -inset-2 rounded-2xl bg-gradient-to-br from-[#6C5DD3]/30 to-transparent blur-xl opacity-80" />
+              <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden shadow-xl border border-white/10">
+                <img
+                  src={anime.poster}
+                  alt={anime.title}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  fetchPriority="high"
+                />
+              </div>
+            </motion.div>
+
+            {/* Tablet Info */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="hidden sm:block lg:hidden flex-1 min-w-0"
+            >
+              <h1 className="text-2xl font-bold font-heading text-white mb-1 leading-tight line-clamp-2">
+                {anime.title}
+              </h1>
+              {anime.titleJp && (
+                <p className="text-white/50 text-sm mb-3 line-clamp-1">{anime.titleJp}</p>
+              )}
+
+              {/* Meta */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">
+                  <Star className="w-3 h-3 fill-current" />
+                  {anime.rating}
+                </span>
+                <StatusBadge status={anime.status} variant="subtle" className="!text-[10px] !px-2 !py-0.5" />
+                {anime.type && <TypeBadge type={anime.type} variant="card" className="!text-[10px]" />}
+              </div>
+
+              {/* Info Pills */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
+                  <Film className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-white/80">{episodeNumbers.length}/{anime.episodes} EP</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-white/80">{anime.releasedYear}</span>
+                </div>
+                {anime.duration && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
+                    <Clock className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-white/80">{anime.duration}</span>
+                  </div>
                 )}
               </div>
 
-              {/* Jadwal moved above - remove duplicate */}
+              {/* Schedule */}
+              {jadwalRilis && (
+                <div className="flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-green-200">Tayang {jadwalRilis.hari} • {jadwalRilis.jam}</span>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  to={`/watch/${anime.id}/${lastWatched?.episodeNumber || 1}`}
+                  className="inline-flex items-center gap-1.5 bg-[#6C5DD3] text-white text-sm font-medium px-4 py-2 rounded-lg"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  {lastWatched ? `Lanjut EP ${lastWatched.episodeNumber}` : 'Tonton'}
+                </Link>
+                <button
+                  onClick={() => toggleBookmark(anime.id)}
+                  className={`p-2 rounded-lg border ${isBookmarked ? 'bg-[#6C5DD3]/20 border-[#6C5DD3]/50 text-white' : 'bg-white/5 border-white/10 text-white/70'}`}
+                >
+                  {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => toggleWatchlist(anime.id)}
+                  className={`p-2 rounded-lg border ${isInWatchlist ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-white/70'}`}
+                >
+                  {isInWatchlist ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </button>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -616,28 +689,28 @@ export default function AnimeDetail() {
       {/* Content Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Tabs defaultValue="episodes" className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 p-0.5 sm:p-1 mb-4 sm:mb-6 w-full sm:w-auto">
+          <TabsList className="bg-white/[0.03] border border-white/10 p-1 sm:p-1.5 mb-4 sm:mb-6 w-full sm:w-auto rounded-2xl">
             <TabsTrigger
               value="episodes"
-              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white text-white/70 text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2"
+              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-[#6C5DD3]/25 text-white/60 data-[state=active]:text-white text-xs sm:text-sm font-medium px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl transition-all duration-200"
             >
               Episode
             </TabsTrigger>
             <TabsTrigger
               value="characters"
-              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white text-white/70 text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2"
+              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-[#6C5DD3]/25 text-white/60 data-[state=active]:text-white text-xs sm:text-sm font-medium px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl transition-all duration-200"
             >
               Karakter
             </TabsTrigger>
             <TabsTrigger
               value="synopsis"
-              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white text-white/70 text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2"
+              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-[#6C5DD3]/25 text-white/60 data-[state=active]:text-white text-xs sm:text-sm font-medium px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl transition-all duration-200"
             >
               Sinopsis
             </TabsTrigger>
             <TabsTrigger
               value="related"
-              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white text-white/70 text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2"
+              className="data-[state=active]:bg-[#6C5DD3] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-[#6C5DD3]/25 text-white/60 data-[state=active]:text-white text-xs sm:text-sm font-medium px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl transition-all duration-200"
             >
               Terkait
             </TabsTrigger>
@@ -730,46 +803,59 @@ export default function AnimeDetail() {
                 <div className="flex-1" />
 
                 {/* View Toggle & Quick Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   {latestEpisode && (
                     <button
                       onClick={() => {
                         const el = document.getElementById('latest-episode');
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 transition-colors"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                      EP Terbaru
+                      <span className="hidden sm:inline">EP Terbaru</span>
+                      <span className="sm:hidden">Terbaru</span>
                     </button>
                   )}
                   <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
                     <button
                       onClick={() => setEpisodeView('list')}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'list'
+                      className={`px-2.5 sm:px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'list'
                         ? 'bg-[#6C5DD3] text-white'
                         : 'text-white/60 hover:text-white'
                         }`}
+                      title="Tampilan List"
                     >
-                      List
+                      <span className="hidden sm:inline">List</span>
+                      <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
                     </button>
                     <button
                       onClick={() => setEpisodeView('compact')}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'compact'
+                      className={`px-2.5 sm:px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'compact'
                         ? 'bg-[#6C5DD3] text-white'
                         : 'text-white/60 hover:text-white'
                         }`}
+                      title="Tampilan Ringkas"
                     >
-                      Ringkas
+                      <span className="hidden sm:inline">Ringkas</span>
+                      <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
                     </button>
                     <button
                       onClick={() => setEpisodeView('comfy')}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'comfy'
+                      className={`px-2.5 sm:px-3 py-1.5 text-xs rounded-lg transition-colors ${episodeView === 'comfy'
                         ? 'bg-[#6C5DD3] text-white'
                         : 'text-white/60 hover:text-white'
                         }`}
+                      title="Tampilan Nyaman"
                     >
-                      Nyaman
+                      <span className="hidden sm:inline">Nyaman</span>
+                      <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM4 21a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2z" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -778,15 +864,16 @@ export default function AnimeDetail() {
             {/* Episode Filter & Search - Mobile: Horizontal Scroll */}
             <div className="flex flex-col gap-3 mb-4">
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-                <div className="flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 p-1 text-xs flex-shrink-0">
+                <div className="flex items-center gap-1 rounded-full bg-white/5 border border-white/10 p-1 text-xs flex-shrink-0">
                   {(['all', 'unwatched', 'watched', 'latest'] as const).map((key) => (
                     <button
                       key={key}
                       onClick={() => setEpisodeFilter(key)}
-                      className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${episodeFilter === key ? 'bg-[#6C5DD3] text-white' : 'text-white/60 hover:text-white'}`}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${episodeFilter === key ? 'bg-[#6C5DD3] text-white' : 'text-white/60 hover:text-white'}`}
                     >
                       {key === 'all' && 'Semua'}
-                      {key === 'unwatched' && 'Belum Ditonton'}
+                      {key === 'unwatched' && <span className="hidden sm:inline">Belum Ditonton</span>}
+                      {key === 'unwatched' && <span className="sm:hidden">Belum</span>}
                       {key === 'watched' && 'Ditonton'}
                       {key === 'latest' && 'Terbaru'}
                     </button>
@@ -799,7 +886,7 @@ export default function AnimeDetail() {
                     placeholder="Cari..."
                     value={episodeSearch}
                     onChange={(e) => setEpisodeSearch(e.target.value)}
-                    className="w-28 sm:w-56 pl-9 pr-3 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
+                    className="w-24 sm:w-56 pl-9 pr-3 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
                   />
                 </div>
                 {(episodeFilter !== 'all' || episodeSearch) && (
@@ -819,7 +906,7 @@ export default function AnimeDetail() {
             <div className={`${episodeView === 'compact' 
               ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3' 
               : episodeView === 'list'
-              ? 'flex flex-col gap-2'
+              ? 'flex flex-col gap-2 sm:gap-3'
               : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
             }`}>
               {filteredEpisodes.map((epNum) => {
@@ -848,9 +935,9 @@ export default function AnimeDetail() {
                     {/* LIST VIEW: Horizontal List like Screenshot */}
                     {episodeView === 'list' ? (
                       <>
-                        <div className="flex items-center gap-4 p-3 bg-[#1A1A2E]/80 rounded-xl border border-white/10 hover:border-[#6C5DD3]/50 hover:bg-[#1A1A2E] transition-all group">
+                        <div className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 bg-[#1A1A2E]/60 rounded-xl border border-white/10 hover:border-[#6C5DD3]/50 hover:bg-[#1A1A2E] transition-all group">
                           {/* Thumbnail */}
-                          <div className="relative w-24 h-16 sm:w-32 sm:h-20 rounded-lg overflow-hidden flex-shrink-0">
+                          <div className="relative w-28 h-18 sm:w-36 sm:h-22 rounded-lg overflow-hidden flex-shrink-0 bg-black/20">
                             <img
                               src={thumbnailUrl}
                               alt={`Episode ${epNum}`}
@@ -859,47 +946,55 @@ export default function AnimeDetail() {
                             />
                             {/* Play overlay */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                              <Play className="w-6 h-6 text-white" fill="white" />
+                              <div className="w-8 h-8 rounded-full bg-[#6C5DD3] flex items-center justify-center">
+                                <Play className="w-4 h-4 text-white" fill="white" />
+                              </div>
                             </div>
                             {/* Watched indicator */}
                             {isWatched && (
-                              <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
-                                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                              <div className="absolute top-1.5 right-1.5 bg-green-500 rounded-full p-0.5 shadow-lg">
+                                <Check className="w-3 h-3 text-white" strokeWidth={3} />
                               </div>
                             )}
+                            {/* EP Number on thumbnail */}
+                            <div className="absolute bottom-1.5 left-1.5 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] font-bold text-white">
+                              EP {epNum}
+                            </div>
                           </div>
                           
                           {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-sm font-bold ${isLatest ? 'text-yellow-400' : 'text-[#6C5DD3]'}`}>
-                                {epNum}
-                              </span>
-                              <h4 className="text-sm font-medium text-white truncate group-hover:text-[#6C5DD3] transition-colors">
-                                {episodeTitle || `Episode ${epNum}`}
-                              </h4>
-                            </div>
+                          <div className="flex-1 min-w-0 py-0.5">
+                            <h4 className="text-sm sm:text-base font-medium text-white truncate group-hover:text-[#6C5DD3] transition-colors leading-tight">
+                              {episodeTitle || `Episode ${epNum}`}
+                            </h4>
                             {(episodeData as any)?.subtitle && (
-                              <p className="text-xs text-white/50 truncate">{(episodeData as any).subtitle}</p>
+                              <p className="text-xs text-white/50 truncate mt-0.5">{(episodeData as any).subtitle}</p>
                             )}
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-white/40">
+                            <div className="flex items-center gap-2 sm:gap-3 mt-2 text-xs text-white/50">
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {anime.duration || '24 min'}
                               </span>
                               {(episodeData as any)?.aired && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 hidden sm:flex">
                                   <Calendar className="w-3 h-3" />
                                   {new Date((episodeData as any).aired).toLocaleDateString('id-ID')}
+                                </span>
+                              )}
+                              {/* Mobile: Show status inline */}
+                              {isLatest && (
+                                <span className="sm:hidden flex items-center gap-1 text-yellow-400">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                                  Baru
                                 </span>
                               )}
                             </div>
                           </div>
                           
                           {/* Right side - Status & Watch Toggle */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col items-end gap-2">
                             {isLatest && (
-                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded-full">
+                              <span className="hidden sm:inline-flex px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold rounded-full">
                                 NEW
                               </span>
                             )}
@@ -911,7 +1006,7 @@ export default function AnimeDetail() {
                               }}
                               className={`p-2 rounded-lg transition-all ${isWatched
                                 ? 'bg-green-500/20 text-green-400'
-                                : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
                                 }`}
                             >
                               {isWatched ? <Check className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
