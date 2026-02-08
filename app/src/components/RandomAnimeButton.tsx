@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shuffle, Play, Info, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
+import { getAnimeUrl, getWatchUrl } from '@/lib/slug';
 
 export default function RandomAnimeButton() {
     const { animeList, isLoading } = useApp();
@@ -75,13 +76,13 @@ export default function RandomAnimeButton() {
 
     const goToAnime = () => {
         if (randomAnime) {
-            navigate(`/anime/${randomAnime.id}`);
+            navigate(getAnimeUrl(randomAnime));
         }
     };
 
     const watchNow = () => {
         if (randomAnime) {
-            navigate(`/watch/${randomAnime.id}/1`);
+            navigate(getWatchUrl(randomAnime, 1));
         }
     };
 

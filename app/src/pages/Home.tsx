@@ -4,6 +4,7 @@ import MobileHome from '@/components/MobileHome';
 import DesktopHome from '@/components/DesktopHome';
 import { HomePageSkeleton } from '@/components/SkeletonLoading';
 import { HomeSEO } from '@/components/Seo';
+import { OrganizationSchema } from '@/components/SchemaOrg';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { apiFetch } from '@/lib/api';
@@ -103,6 +104,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0F0F1A]">
       <HomeSEO />
+      <OrganizationSchema />
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 z-0">
           <div className="absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#6C5DD3]/20 blur-[140px]" />
@@ -113,6 +115,21 @@ export default function Home() {
           <Hero />
         </div>
       </div>
+
+      {/* SEO Content Section - Hidden visually but readable by Google */}
+      <section className="sr-only" aria-hidden="true">
+        <h1>Nonton Anime Subtitle Indonesia Terbaru & Terlengkap</h1>
+        <p>
+          Animeku adalah platform terbaik untuk <strong>nonton anime subtitle Indonesia</strong> secara gratis. 
+          Koleksi lengkap anime sub Indo mulai dari anime ongoing, movie, hingga anime klasik dengan 
+          kualitas HD. Streaming tanpa buffering, update tiap hari!
+        </p>
+        <div>
+          {['Action', 'Romance', 'Comedy', 'Drama', 'Fantasy', 'Isekai'].map((genre) => (
+            <a key={genre} href={`/genres?genre=${genre}`}>{genre}</a>
+          ))}
+        </div>
+      </section>
 
       <div className="relative z-10 bg-[#0F0F1A]">
         {/* Mobile Layout - Only visible on mobile */}

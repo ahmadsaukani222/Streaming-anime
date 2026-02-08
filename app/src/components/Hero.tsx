@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api';
 import OptimizedImage from '@/components/OptimizedImage';
 import { createLogger } from '@/lib/logger';
 import type { Anime } from '@/data/animeData';
+import { getAnimeUrl, getWatchUrl } from '@/lib/slug';
 
 const logger = createLogger('Hero');
 
@@ -210,7 +211,7 @@ export default function Hero() {
           ) : (
             <OptimizedImage
               src={slide.poster}
-              alt={slide.title}
+              alt={`Banner ${slide.title} - Nonton Anime Subtitle Indonesia Gratis`}
               aspectRatio="banner"
               priority
               className="w-full h-full"
@@ -302,14 +303,14 @@ export default function Hero() {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
               <Link
-                to={`/watch/${slide.id}/1`}
+                to={getWatchUrl(slide, 1)}
                 className="group flex items-center justify-center gap-2 px-5 py-2 text-sm bg-[#6C5DD3] hover:bg-[#5a4bbf] text-white font-semibold rounded-xl transition-all duration-300 shadow-md sm:shadow-lg shadow-[#6C5DD3]/20 sm:shadow-[#6C5DD3]/30 hover:shadow-[#6C5DD3]/40 w-full sm:w-auto sm:px-6 sm:py-3 sm:text-base"
               >
                 <Play className="w-5 h-5 fill-current group-hover:scale-110 transition-transform" />
                 Tonton Sekarang
               </Link>
               <Link
-                to={`/anime/${slide.id}`}
+                to={getAnimeUrl(slide)}
                 className="flex items-center justify-center gap-2 px-5 py-2 text-sm bg-transparent hover:bg-white/10 text-white font-semibold rounded-xl transition-colors duration-200 border border-white/40 w-full sm:w-auto sm:px-6 sm:py-3 sm:text-base"
               >
                 <Info className="w-5 h-5" />
@@ -390,7 +391,7 @@ export default function Hero() {
           >
             <OptimizedImage
               src={item.poster}
-              alt={item.title}
+              alt={`Thumbnail ${item.title}`}
               aspectRatio="poster"
               containerClassName="w-full h-full"
             />

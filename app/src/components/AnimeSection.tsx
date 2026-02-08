@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Flame, Clock, Star, TrendingUp } from 'lucid
 import { motion } from 'framer-motion';
 import type { Anime, Episode } from '@/data/animeData';
 import AnimeCard from './AnimeCard';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface AnimeSectionProps {
   title: string;
@@ -211,7 +212,7 @@ export default function AnimeSection({
         {/* List */}
         <div className="flex flex-col gap-4">
           {displayAnime.slice(0, 5).map((anime, index) => (
-            <Link key={anime.id} to={`/anime/${anime.id}`} className="group flex gap-3">
+            <Link key={anime.id} to={getAnimeUrl(anime)} className="group flex gap-3">
               <div className="relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden">
                 <img
                   src={anime.poster}
@@ -281,7 +282,7 @@ export default function AnimeSection({
                 className="lg:row-span-2"
               >
                 <Link
-                  to={`/anime/${displayAnime[0].id}`}
+                  to={getAnimeUrl(displayAnime[0])}
                   className="group block relative h-full min-h-[400px] rounded-2xl overflow-hidden"
                 >
                   <img
@@ -368,3 +369,4 @@ export default function AnimeSection({
     </section>
   );
 }
+

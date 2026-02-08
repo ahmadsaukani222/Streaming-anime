@@ -275,9 +275,53 @@ export function WebsiteSchema() {
   return null;
 }
 
+// Organization schema for homepage
+export function OrganizationSchema() {
+  useEffect(() => {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Animeku',
+      url: 'https://animeku.xyz',
+      logo: 'https://animeku.xyz/favicon.svg',
+      sameAs: [
+        'https://twitter.com/animeku',
+        'https://facebook.com/animeku',
+        'https://instagram.com/animeku'
+      ],
+      description: 'Platform streaming anime subtitle Indonesia terbaru dan terlengkap',
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: 'ID'
+      }
+    };
+
+    const existingScript = document.getElementById('schema-organization');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    const script = document.createElement('script');
+    script.id = 'schema-organization';
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(schema);
+    document.head.appendChild(script);
+
+    return () => {
+      const scriptToRemove = document.getElementById('schema-organization');
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
+    };
+  }, []);
+
+  return null;
+}
+
 export default {
   AnimeSchema,
   VideoSchema,
   BreadcrumbSchema,
-  WebsiteSchema
+  WebsiteSchema,
+  OrganizationSchema
 };

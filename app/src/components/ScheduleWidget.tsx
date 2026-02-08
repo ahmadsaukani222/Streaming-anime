@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight, Play, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
+import { getAnimeUrl } from '@/lib/slug';
 
 const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const DAYS_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -150,7 +151,7 @@ export default function ScheduleWidget() {
                                     {scheduleForDay.map((anime) => (
                                         <Link
                                             key={anime.id}
-                                            to={`/anime/${anime.id}`}
+                                            to={getAnimeUrl(anime)}
                                             className="group flex-shrink-0 w-[140px]"
                                         >
                                             <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2">
@@ -189,7 +190,7 @@ export default function ScheduleWidget() {
                                     {scheduleForDay.slice(0, 4).map((anime) => (
                                         <Link
                                             key={anime.id}
-                                            to={`/anime/${anime.id}`}
+                                            to={getAnimeUrl(anime)}
                                             className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors"
                                         >
                                             <div className="relative w-10 h-14 rounded-lg overflow-hidden flex-shrink-0">

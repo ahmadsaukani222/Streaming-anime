@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Play, Clock, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
+import { getWatchUrl } from '@/lib/slug';
 
 export default function ContinueWatching() {
     const { watchHistory, animeList, user } = useApp();
@@ -63,7 +64,7 @@ export default function ContinueWatching() {
                             className="flex-shrink-0 w-72 snap-start"
                         >
                             <Link
-                                to={`/watch/${item.animeId}/${item.episodeNumber}`}
+                                to={getWatchUrl(item.anime, item.episodeNumber)}
                                 className="group block bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-all duration-300 border border-white/5 hover:border-[#6C5DD3]/30"
                             >
                                 {/* Thumbnail with Play Overlay */}

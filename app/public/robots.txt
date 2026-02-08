@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /login
+Disallow: /register
 
+# Sitemap
 Sitemap: https://animeku.xyz/sitemap.xml
+Sitemap: https://animeku.xyz/sitemap-index.xml

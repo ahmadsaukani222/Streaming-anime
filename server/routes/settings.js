@@ -76,4 +76,20 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
+// Ping Google to re-crawl sitemap
+router.post('/ping-google', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const response = await fetch('https://www.google.com/ping?sitemap=https://animeku.xyz/sitemap.xml');
+        if (response.ok) {
+            console.log('[SEO] Successfully pinged Google');
+            res.json({ success: true, message: 'Pinged Google successfully' });
+        } else {
+            res.status(500).json({ error: 'Failed to ping Google' });
+        }
+    } catch (err) {
+        console.error('[SEO] Ping error:', err);
+        res.status(500).json({ error: 'Failed to ping Google' });
+    }
+});
+
 module.exports = router;

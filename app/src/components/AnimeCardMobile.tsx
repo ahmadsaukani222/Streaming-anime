@@ -3,6 +3,7 @@ import { Play, Star, ChevronRight } from 'lucide-react';
 import type { Anime } from '@/data/animeData';
 import { motion } from 'framer-motion';
 import OptimizedImage from '@/components/OptimizedImage';
+import { getAnimeUrl } from '@/lib/slug';
 
 import { THEME } from '@/config/theme';
 
@@ -23,7 +24,7 @@ function ListView({ anime, index = 0, progress, episodeTitle }: AnimeCardMobileP
       transition={{ delay: index * 0.05 }}
     >
       <Link 
-        to={`/anime/${anime.id}`}
+        to={getAnimeUrl(anime)}
         className="group flex gap-3 p-2 rounded-xl bg-white/[0.03] active:bg-white/[0.08] transition-colors"
       >
         {/* Poster - Small */}
@@ -105,7 +106,7 @@ function CompactView({ anime, index = 0 }: AnimeCardMobileProps) {
       transition={{ delay: index * 0.03 }}
       className="group"
     >
-      <Link to={`/anime/${anime.id}`} className="block">
+      <Link to={getAnimeUrl(anime)} className="block">
         {/* Poster */}
         <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
           <OptimizedImage
@@ -150,7 +151,7 @@ function PosterView({ anime, index = 0 }: AnimeCardMobileProps) {
       transition={{ delay: index * 0.05 }}
       className="group flex-shrink-0 w-28"
     >
-      <Link to={`/anime/${anime.id}`} className="block">
+      <Link to={getAnimeUrl(anime)} className="block">
         <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
           <OptimizedImage
             src={anime.poster}
@@ -204,3 +205,4 @@ export default function AnimeCardMobile({
     />
   );
 }
+

@@ -69,14 +69,29 @@ export default function AnimeDetail() {
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  const anime = id ? animeList.find(a => a.id === id) : undefined;
-  const isBookmarked = id ? bookmarks.includes(id) : false;
-  const isInWatchlist = id ? watchlist.includes(id) : false;
-  const lastWatched = id ? getLastWatched(id) : undefined;
+  // Find anime with dual URL support (id exact match, cleanSlug match, or partial id match)
+  const anime = id ? animeList.find(a => {
+    // Exact match with id
+    if (a.id === id) return true;
+    // Match with cleanSlug
+    if (a.cleanSlug === id) return true;
+    // Match if id starts with the slug (for backward compatibility)
+    if (a.id.startsWith(id + '-')) return true;
+    // Match if id contains the slug
+    if (a.id.includes(id)) return true;
+    return false;
+  }) : undefined;
+  
+  // Use real ID from anime data if found, otherwise use URL param
+  const realId = anime?.id || id;
+  
+  const isBookmarked = realId ? bookmarks.includes(realId) : false;
+  const isInWatchlist = realId ? watchlist.includes(realId) : false;
+  const lastWatched = realId ? getLastWatched(realId) : undefined;
 
   // Get database-backed data
-  const userRating = id ? getUserRating(id) : 0;
-  const watchedEpisodes = id ? getWatchedEpisodes(id) : [];
+  const userRating = realId ? getUserRating(realId) : 0;
+  const watchedEpisodes = realId ? getWatchedEpisodes(realId) : [];
 
   // UI state only
   const [hoverRating, setHoverRating] = useState<number>(0);
@@ -85,7 +100,7 @@ export default function AnimeDetail() {
 
   // Save user rating (Database-backed)
   const handleRating = (rating: number) => {
-    if (id) rateAnime(id, rating);
+    if (realId) rateAnime(realId, rating);
   };
 
   // Toggle episode watched (Database-backed)
@@ -255,6 +270,7 @@ export default function AnimeDetail() {
           status={anime.status}
           episodes={anime.episodes}
           year={anime.releasedYear}
+          studio={anime.studio}
         />
       )}
       

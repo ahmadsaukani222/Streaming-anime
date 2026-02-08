@@ -7,6 +7,7 @@ import AnimeSectionMobile from '@/components/AnimeSectionMobile';
 import ScheduleWidget from '@/components/ScheduleWidget';
 import OptimizedImage from '@/components/OptimizedImage';
 import type { SidebarWidget } from '@/types';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface MobileHomeProps {
   trendingAnime: Anime[];
@@ -80,7 +81,7 @@ export default function MobileHome({
               {searchSuggestions.map((anime) => (
                 <Link
                   key={anime.id}
-                  to={`/anime/${anime.id}`}
+                  to={getAnimeUrl(anime)}
                   onClick={() => setSearchQuery('')}
                   className="flex items-center gap-3 p-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
                 >

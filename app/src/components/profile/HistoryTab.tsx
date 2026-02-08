@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
 import type { WatchHistory } from '@/context/AppContext';
 import type { Anime } from '@/data/animeData';
+import { getWatchUrl } from '@/lib/slug';
 
 interface HistoryTabProps {
   watchHistory: WatchHistory[];
@@ -63,7 +64,7 @@ export default function HistoryTab({ watchHistory, animeList }: HistoryTabProps)
             </div>
           </div>
           <Link
-            to={`/watch/${item.animeId}/${item.episodeNumber}`}
+            to={getWatchUrl({ id: item.animeId, title: item.anime?.title || '' }, item.episodeNumber)}
             className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#6C5DD3] text-white text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-[#5a4ec0] transition-colors w-full xs:w-auto text-center"
           >
             Lanjutkan

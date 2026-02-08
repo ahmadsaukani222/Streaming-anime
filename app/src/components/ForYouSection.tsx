@@ -5,6 +5,7 @@ import { Sparkles, ChevronLeft, ChevronRight, Star, TrendingUp, Clock } from 'lu
 import { useRecommendations, useWatchInsights } from '@/hooks/useRecommendations';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
+import { getAnimeUrl } from '@/lib/slug';
 
 export default function ForYouSection() {
   const { animeList, watchHistory, ratings, bookmarks, user } = useApp();
@@ -124,7 +125,7 @@ export default function ForYouSection() {
                 transition={{ delay: index * 0.05 }}
                 className="flex-shrink-0 w-40 sm:w-48"
               >
-                <Link to={`/anime/${anime.id}`} className="group block">
+                <Link to={getAnimeUrl(anime)} className="group block">
                   {/* Poster */}
                   <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2">
                     <img
@@ -192,7 +193,7 @@ export default function ForYouSection() {
                   transition={{ delay: index * 0.05 }}
                   className="flex-shrink-0 w-40 sm:w-48"
                 >
-                  <Link to={`/anime/${anime.id}`} className="group block">
+                  <Link to={getAnimeUrl(anime)} className="group block">
                     <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2">
                       <img
                         src={anime.poster}
@@ -237,7 +238,7 @@ export default function ForYouSection() {
                 {recommendations.slice(0, 4).map((rec) => (
                   <Link
                     key={rec.id}
-                    to={`/anime/${rec.id}`}
+                    to={getAnimeUrl(rec)}
                     className="group"
                   >
                     <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2">
@@ -265,3 +266,6 @@ export default function ForYouSection() {
     </section>
   );
 }
+
+
+

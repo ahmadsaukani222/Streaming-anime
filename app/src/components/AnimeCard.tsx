@@ -4,6 +4,7 @@ import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import { MotionDiv } from '@/components/MotionWrapper';
+import { getAnimeUrl } from '@/lib/slug';
 
 
 interface AnimeCardProps {
@@ -24,10 +25,10 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
         transition={{ delay: index * 0.1 }}
         className="group flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300"
       >
-        <Link to={`/anime/${anime.id}`} className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden">
+        <Link to={getAnimeUrl(anime)} className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden">
           <OptimizedImage
             src={anime.poster}
-            alt={anime.title}
+            alt={`Poster ${anime.title} - Nonton Anime Subtitle Indonesia`}
             aspectRatio="poster"
             className="transition-transform duration-500 group-hover:scale-110"
           />
@@ -70,10 +71,10 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
         transition={{ delay: index * 0.05 }}
         className="group relative"
       >
-        <Link to={`/anime/${anime.id}`} className="block relative aspect-[3/4] rounded-xl overflow-hidden">
+        <Link to={getAnimeUrl(anime)} className="block relative aspect-[3/4] rounded-xl overflow-hidden">
           <OptimizedImage
             src={anime.poster}
-            alt={anime.title}
+            alt={`Poster ${anime.title} - Nonton Anime Subtitle Indonesia`}
             aspectRatio="poster"
             className="transition-transform duration-500 group-hover:scale-110"
           />
@@ -111,10 +112,10 @@ export default function AnimeCard({ anime, variant = 'default', index = 0 }: Ani
       transition={{ delay: index * 0.1 }}
       className="group relative"
     >
-      <Link to={`/anime/${anime.id}`} className="block relative rounded-xl overflow-hidden bg-[#1f1f2e]">
+      <Link to={getAnimeUrl(anime)} className="block relative rounded-xl overflow-hidden bg-[#1f1f2e]">
         <OptimizedImage
           src={anime.poster}
-          alt={anime.title}
+          alt={`Poster ${anime.title} - Nonton Anime Subtitle Indonesia`}
           aspectRatio="poster"
           className="transition-transform duration-500 group-hover:scale-110"
         />
