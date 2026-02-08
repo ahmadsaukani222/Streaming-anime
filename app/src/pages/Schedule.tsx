@@ -260,18 +260,14 @@ export default function Schedule() {
             />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24">
                 {/* Header - Desktop Only */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="hidden sm:block pb-6 mb-6"
-                >
+                <div className="hidden sm:block pb-6 mb-6 animate-fade-in">
                     <div className="flex items-center justify-center gap-3">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00C2FF] to-[#6C5DD3] flex items-center justify-center shadow-lg shadow-[#6C5DD3]/20">
                             <Calendar className="w-6 h-6 text-white" />
                         </div>
                         <h1 className="text-2xl font-bold text-white">Jadwal Rilis</h1>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Week Selector - Modern Pills */}
                 <div className="mb-4 sm:mb-8 overflow-x-auto scrollbar-hide">
@@ -343,24 +339,16 @@ export default function Schedule() {
                         ))}
                     </div>
                 ) : (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center py-16"
-                    >
+                    <div className="text-center py-16 animate-fade-in">
                         <Calendar className="w-16 h-16 text-white/20 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-white/70 mb-2">Tidak ada rilis hari ini</h3>
                         <p className="text-white/40">Pilih hari lain untuk melihat jadwal anime</p>
-                    </motion.div>
+                    </div>
                 )}
 
                 {/* Compact Reminder Badge */}
                 {user && subscribedAnime.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 mb-4"
-                    >
+                    <div className="mt-6 mb-4 animate-fade-in">
                         <div className="bg-gradient-to-r from-[#6C5DD3]/20 to-[#00C2FF]/10 rounded-2xl p-3 border border-[#6C5DD3]/20">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -379,7 +367,7 @@ export default function Schedule() {
                                 </Link>
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 )}
 
                 {/* Legend */}
