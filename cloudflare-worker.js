@@ -5,7 +5,7 @@ export default {
 
     // SSR Routes - Proxy ke backend server untuk SEO/Social Sharing
     if (path.match(/^\/anime\/[^\/]+/) || path.match(/^\/watch\/[^\/]+/)) {
-      // Proxy ke backend server
+      // Gunakan alamat IP server Anda
       const backendUrl = 'http://45.130.164.161:5000' + path + url.search;
       
       try {
@@ -55,7 +55,7 @@ export default {
       }
     }
 
-    // Static Files - Ambil dari R2 Bucket
+    // Static Files - Ambil dari R2 Bucket (menggunakan env.BUCKET yang sudah ter-binding)
     let objectPath = path.slice(1) || 'index.html';
     
     // Hapus leading slash jika ada
