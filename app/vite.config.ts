@@ -28,7 +28,7 @@ export default defineConfig({
           // Animation (heavy, load on demand)
           'animation': ['framer-motion'],
           // Heavy utilities
-          'utils': ['date-fns', 'axios'],
+          'utils': ['date-fns'],
         },
         // Ensure small chunks for better loading
         chunkFileNames: 'assets/js/[name]-[hash].js',
