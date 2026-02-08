@@ -101,14 +101,25 @@ router.post('/', requireAdmin, validateBody([
     }
 });
 
-// Get Single Anime (Custom or Scraped fallback)
+// Get Single Anime by ID or Clean Slug (Custom or Scraped fallback)
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Try DB first (Custom Anime)
-        const anime = await CustomAnime.findOne({ id: id });
+        // 1. Try DB first with dual URL support (id or cleanSlug)
+        let anime = await CustomAnime.findBySlug(id);
         if (anime) {
+            // Auto-generate cleanSlug if not exists (migration untuk data lama)
+            if (!anime.cleanSlug && anime.title) {
+                anime.cleanSlug = anime.title
+                    .toLowerCase()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                await anime.save();
+                console.log(`[API] Generated cleanSlug for ${anime.id}: ${anime.cleanSlug}`);
+            }
             return res.json(anime);
         }
 
@@ -484,8 +495,8 @@ router.post('/scrape-episodes/:id', requireAdmin, async (req, res) => {
         console.log(`[API] Scraping episodes for anime ID: ${id}`);
         if (url) console.log(`[API] Using direct URL: ${url}`);
 
-        // 1. Find anime in database, or create if provided from frontend
-        let anime = await CustomAnime.findOne({ id: id });
+        // 1. Find anime in database (support dual URL), or create if provided from frontend
+        let anime = await CustomAnime.findBySlug(id);
 
         if (!anime) {
             // Try to find by title if animeData provided
@@ -716,16 +727,22 @@ router.post('/:id/view', async (req, res) => {
         const now = new Date();
         const dateString = now.toISOString().split('T')[0]; // YYYY-MM-DD
 
-        // Record view in history
+        // Find anime by slug (dual URL support)
+        const anime = await CustomAnime.findBySlug(id);
+        if (!anime) {
+            return res.status(404).json({ error: 'Anime not found' });
+        }
+
+        // Record view in history (store the actual anime id)
         await ViewHistory.create({
-            animeId: id,
+            animeId: anime.id,
             date: now,
             dateString: dateString
         });
 
         // Also increment total views counter on anime
         await CustomAnime.findOneAndUpdate(
-            { id: id },
+            { id: anime.id },
             { $inc: { views: 1 } }
         );
 
@@ -774,8 +791,8 @@ router.post('/:id/episode/:ep/generate-subtitle', requireAdmin, validateBody([
 
         console.log(`[Subtitle] Generating for ${id} episode ${ep} using ${provider}...`);
 
-        // Find the anime
-        const anime = await CustomAnime.findOne({ id });
+        // Find the anime (support dual URL)
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -842,7 +859,7 @@ router.get('/:id/episode/:ep/subtitle', async (req, res) => {
     try {
         const { id, ep } = req.params;
 
-        const anime = await CustomAnime.findOne({ id });
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -863,7 +880,7 @@ router.delete('/:id/episode/:ep/subtitle', requireAdmin, async (req, res) => {
     try {
         const { id, ep } = req.params;
 
-        const anime = await CustomAnime.findOne({ id });
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -888,7 +905,7 @@ router.post('/:id/episode/:ep/thumbnail', requireAdmin, async (req, res) => {
         const { id, ep } = req.params;
         const { videoUrl, timestamp } = req.body;
 
-        const anime = await CustomAnime.findOne({ id });
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -935,7 +952,7 @@ router.get('/:id/episode/:ep', async (req, res) => {
     try {
         const { id, ep } = req.params;
 
-        const anime = await CustomAnime.findOne({ id });
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -956,7 +973,7 @@ router.post('/:id/thumbnails/all', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
-        const anime = await CustomAnime.findOne({ id });
+        const anime = await CustomAnime.findBySlug(id);
         if (!anime) {
             return res.status(404).json({ error: 'Anime not found' });
         }
@@ -1023,6 +1040,67 @@ router.post('/:id/thumbnails/all', requireAdmin, async (req, res) => {
 
     } catch (err) {
         console.error('[Anime] Generate all thumbnails error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// MIGRATION: Generate cleanSlug for all anime that don't have it
+router.post('/migrate/clean-slugs', requireAdmin, async (req, res) => {
+    try {
+        console.log('[Migrate] Starting cleanSlug generation for all anime...');
+        
+        // Find all anime without cleanSlug
+        const animeWithoutSlug = await CustomAnime.find({
+            $or: [
+                { cleanSlug: { $exists: false } },
+                { cleanSlug: null },
+                { cleanSlug: '' }
+            ]
+        });
+        
+        console.log(`[Migrate] Found ${animeWithoutSlug.length} anime without cleanSlug`);
+        
+        let updated = 0;
+        let failed = 0;
+        const results = [];
+        
+        for (const anime of animeWithoutSlug) {
+            try {
+                if (anime.title) {
+                    const cleanSlug = anime.title
+                        .toLowerCase()
+                        .replace(/[^\w\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-|-$/g, '');
+                    
+                    anime.cleanSlug = cleanSlug;
+                    await anime.save();
+                    updated++;
+                    results.push({ id: anime.id, title: anime.title, cleanSlug, status: 'updated' });
+                    console.log(`[Migrate] Updated: ${anime.id} → ${cleanSlug}`);
+                } else {
+                    failed++;
+                    results.push({ id: anime.id, status: 'failed', reason: 'No title' });
+                }
+            } catch (err) {
+                failed++;
+                results.push({ id: anime.id, status: 'failed', reason: err.message });
+                console.error(`[Migrate] Failed for ${anime.id}:`, err.message);
+            }
+        }
+        
+        res.json({
+            success: true,
+            summary: {
+                total: animeWithoutSlug.length,
+                updated,
+                failed
+            },
+            results
+        });
+    } catch (err) {
+        console.error('[Migrate] Error:', err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -23,7 +23,8 @@ export interface Character {
 }
 
 export interface Anime {
-  id: string;
+  id: string; // Format lama: title-malId (contoh: naruto-12345)
+  cleanSlug?: string; // Format baru: title saja tanpa ID (contoh: naruto)
   title: string;
   titleJp?: string;
   synopsis: string;

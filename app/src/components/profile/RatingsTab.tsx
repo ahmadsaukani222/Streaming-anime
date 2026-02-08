@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Star, Trash2 } from 'lucide-react';
 import type { Rating } from '@/context/AppContext';
 import type { Anime } from '@/data/animeData';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface RatingsTabProps {
   ratings: Rating[];
@@ -47,7 +48,7 @@ export default function RatingsTab({ ratings, animeList, onDeleteRating }: Ratin
             loading="lazy"
           />
           <div className="flex-1 min-w-0">
-            <Link to={`/anime/${item.animeId}`} className="hover:text-[#6C5DD3] transition-colors">
+            <Link to={getAnimeUrl({ id: item.animeId, title: item.anime?.title || '' })} className="hover:text-[#6C5DD3] transition-colors">
               <h3 className="font-semibold text-white line-clamp-1">{item.anime?.title}</h3>
             </Link>
             <div className="flex items-center gap-2 mt-2">

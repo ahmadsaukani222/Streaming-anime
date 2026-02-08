@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationDropdown from './NotificationDropdown';
 import SafeAvatar from '@/components/SafeAvatar';
+import { getAnimeUrl } from '@/lib/slug';
 
 export default function Navbar() {
   const { user, logout, searchQuery, setSearchQuery, bookmarks, watchlist, animeList } = useApp();
@@ -397,7 +398,7 @@ export default function Navbar() {
                     .map((anime) => (
                       <Link
                         key={anime.id}
-                        to={`/anime/${anime.id}`}
+                        to={getAnimeUrl(anime)}
                         onClick={() => {
                           setSearchQuery('');
                           setIsSearchOpen(false);

@@ -9,6 +9,7 @@ import { BACKEND_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { StaticPageSEO } from '@/components/Seo';
+import { getAnimeUrl } from '@/lib/slug';
 
 // Day names in Indonesian
 const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -229,7 +230,7 @@ export default function Schedule() {
                                     className="flex-shrink-0 w-[140px] sm:w-auto"
                                 >
                                     <Link
-                                        to={`/anime/${anime.id}`}
+                                        to={getAnimeUrl(anime)}
                                         className="group block sm:flex gap-0 sm:gap-4 p-0 sm:p-3 rounded-xl sm:rounded-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(108,93,211,0.15)]"
                                     >
                                         {/* Poster - Mobile: Vertical Card, Desktop: Horizontal with Glow */}

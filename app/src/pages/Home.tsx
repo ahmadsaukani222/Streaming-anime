@@ -4,6 +4,7 @@ import MobileHome from '@/components/MobileHome';
 import DesktopHome from '@/components/DesktopHome';
 import { HomePageSkeleton } from '@/components/SkeletonLoading';
 import { HomeSEO } from '@/components/Seo';
+import { OrganizationSchema } from '@/components/SchemaOrg';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { apiFetch } from '@/lib/api';
@@ -103,6 +104,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0F0F1A]">
       <HomeSEO />
+      <OrganizationSchema />
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 z-0">
           <div className="absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#6C5DD3]/20 blur-[140px]" />
@@ -114,28 +116,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* SEO Content Section */}
-      <section className="relative z-10 bg-[#0F0F1A] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
-            Nonton Anime Subtitle Indonesia Terbaru & Terlengkap
-          </h1>
-          <p className="text-white/70 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-            Animeku adalah platform terbaik untuk <strong>nonton anime subtitle Indonesia</strong> secara gratis. 
-            Koleksi lengkap anime sub Indo mulai dari anime ongoing, movie, hingga anime klasik dengan 
-            kualitas HD. Streaming tanpa buffering, update tiap hari!
-          </p>
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
-            {['Action', 'Romance', 'Comedy', 'Drama', 'Fantasy', 'Isekai'].map((genre) => (
-              <a
-                key={genre}
-                href={`/genres?genre=${genre}`}
-                className="px-4 py-2 bg-white/5 hover:bg-[#6C5DD3]/20 text-white/80 hover:text-white text-sm rounded-full transition-colors border border-white/10"
-              >
-                {genre}
-              </a>
-            ))}
-          </div>
+      {/* SEO Content Section - Hidden visually but readable by Google */}
+      <section className="sr-only" aria-hidden="true">
+        <h1>Nonton Anime Subtitle Indonesia Terbaru & Terlengkap</h1>
+        <p>
+          Animeku adalah platform terbaik untuk <strong>nonton anime subtitle Indonesia</strong> secara gratis. 
+          Koleksi lengkap anime sub Indo mulai dari anime ongoing, movie, hingga anime klasik dengan 
+          kualitas HD. Streaming tanpa buffering, update tiap hari!
+        </p>
+        <div>
+          {['Action', 'Romance', 'Comedy', 'Drama', 'Fantasy', 'Isekai'].map((genre) => (
+            <a key={genre} href={`/genres?genre=${genre}`}>{genre}</a>
+          ))}
         </div>
       </section>
 

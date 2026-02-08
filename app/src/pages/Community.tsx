@@ -12,6 +12,7 @@ import { getAuthHeaders } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import SafeAvatar from '@/components/SafeAvatar';
 import { StaticPageSEO } from '@/components/Seo';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface Discussion {
     _id: string;
@@ -859,7 +860,7 @@ export default function Community() {
                                                 <div className="flex gap-4">
                                                     {/* Anime Poster */}
                                                     {review.animePoster && (
-                                                        <Link to={`/anime/${review.animeId}`} className="flex-shrink-0 hidden sm:block">
+                                                        <Link to={getAnimeUrl({ id: review.animeId, title: review.animeTitle })} className="flex-shrink-0 hidden sm:block">
                                                             <img
                                                                 src={review.animePoster}
                                                                 alt={review.animeTitle}
@@ -874,7 +875,7 @@ export default function Community() {
                                                         <div className="flex items-start justify-between gap-2 mb-2">
                                                             <div>
                                                                 <Link
-                                                                    to={`/anime/${review.animeId}`}
+                                                                    to={getAnimeUrl({ id: review.animeId, title: review.animeTitle })}
                                                                     className="text-[#6C5DD3] text-sm hover:underline"
                                                                 >
                                                                     {review.animeTitle}

@@ -7,6 +7,7 @@ import type { Anime } from '@/data/animeData';
 import { useApp } from '@/context/AppContext';
 import OptimizedImage from '@/components/OptimizedImage';
 import ScheduleWidget from '@/components/ScheduleWidget';
+import { getAnimeUrl } from '@/lib/slug';
 
 import type { SidebarWidget } from '@/types';
 
@@ -46,7 +47,7 @@ function AnimeCard({ anime, index }: { anime: Anime; index: number }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link to={`/anime/${anime.id}`} className="block">
+      <Link to={getAnimeUrl(anime)} className="block">
         {/* Poster */}
         <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
           <OptimizedImage
@@ -319,7 +320,7 @@ function RowSection({
 function ContinueCard({ anime }: { anime: Anime }) {
   return (
     <Link 
-      to={`/anime/${anime.id}`}
+      to={getAnimeUrl(anime)}
       className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors"
     >
       <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
@@ -414,7 +415,7 @@ export default function DesktopHome({
                   {searchSuggestions.map((anime) => (
                     <Link
                       key={anime.id}
-                      to={`/anime/${anime.id}`}
+                      to={getAnimeUrl(anime)}
                       onClick={() => setSearchQuery('')}
                       className="flex items-center gap-3 p-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
                     >
@@ -540,7 +541,7 @@ export default function DesktopHome({
                 {topRatedAnime.slice(0, 5).map((anime, index) => (
                   <Link
                     key={anime.id}
-                    to={`/anime/${anime.id}`}
+                    to={getAnimeUrl(anime)}
                     className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group"
                   >
                     <span className={`w-6 text-center text-sm font-bold ${
@@ -579,13 +580,18 @@ export default function DesktopHome({
 
             {/* Random Anime Button */}
             {sidebarWidgets.find(w => w.id === 'random')?.enabled && (
-              <Link
-                to={`/anime/${animeList[Math.floor(Math.random() * animeList.length)]?.id || ''}`}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-white/5 border border-white/5 text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                Anime Random
-              </Link>
+              (() => {
+                const randomAnime = animeList[Math.floor(Math.random() * animeList.length)];
+                return (
+                  <Link
+                    to={randomAnime ? getAnimeUrl(randomAnime) : '/anime-list'}
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-white/5 border border-white/5 text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    Anime Random
+                  </Link>
+                );
+              })()
             )}
           </aside>
         </div>
@@ -593,3 +599,4 @@ export default function DesktopHome({
     </div>
   );
 }
+

@@ -36,6 +36,7 @@ import { apiFetch } from '@/lib/api';
 import { WatchSEO } from '@/components/Seo';
 import { VideoSchema, BreadcrumbSchema } from '@/components/SchemaOrg';
 import { createLogger } from '@/lib/logger';
+import { getAnimeUrl, getWatchUrl } from '@/lib/slug';
 
 const logger = createLogger('Watch');
 
@@ -443,7 +444,7 @@ export default function Watch() {
 
   const goToEpisode = (epNum: number) => {
     if (epNum >= 1 && epNum <= totalEpisodes && id) {
-      navigate(`/watch/${id}/${epNum}`);
+      navigate(getWatchUrl(anime!, epNum));
     }
   };
 
@@ -702,8 +703,8 @@ export default function Watch() {
   
   const breadcrumbItems = [
     { name: 'Home', url: 'https://animeku.xyz/' },
-    { name: anime?.title || 'Anime', url: `https://animeku.xyz/anime/${id}` },
-    { name: `Episode ${currentEpisode}`, url: `https://animeku.xyz/watch/${id}/${currentEpisode}` }
+    { name: anime?.title || 'Anime', url: `https://animeku.xyz${getAnimeUrl(anime!)}` },
+    { name: `Episode ${currentEpisode}`, url: `https://animeku.xyz${getWatchUrl(anime!, currentEpisode)}` }
   ];
 
   return (
@@ -716,6 +717,7 @@ export default function Watch() {
           url={`/watch/${id}/${currentEpisode}`}
           videoUrl={videoUrl}
           episode={currentEpisode}
+          duration={anime.duration ? `PT${parseInt(anime.duration)}M` : 'PT24M'}
         />
       )}
       {anime && videoUrl && (
@@ -747,7 +749,7 @@ export default function Watch() {
             <div className="relative bg-black rounded-xl overflow-hidden">
               {/* Back Button */}
               <Link
-                to={`/anime/${id}`}
+                to={getAnimeUrl(anime!)}
                 className="absolute top-4 left-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg text-white/70 hover:text-white transition-colors text-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1107,7 +1109,7 @@ export default function Watch() {
                   return (
                     <Link
                       key={epNum}
-                      to={`/watch/${anime.id}/${epNum}`}
+                      to={getWatchUrl(anime, epNum)}
                       className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all hover:scale-105 ${epNum === currentEpisode
                         ? 'bg-[#6C5DD3] text-white'
                         : hasStream

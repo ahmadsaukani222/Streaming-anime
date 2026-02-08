@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Bookmark } from 'lucide-react';
 import type { Anime } from '@/data/animeData';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface BookmarksTabProps {
   bookmarkedAnime: Anime[];
@@ -28,7 +29,7 @@ export default function BookmarksTab({ bookmarkedAnime }: BookmarksTabProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
         >
-          <Link to={`/anime/${anime.id}`} className="group block relative aspect-[3/4] rounded-xl overflow-hidden">
+          <Link to={getAnimeUrl(anime)} className="group block relative aspect-[3/4] rounded-xl overflow-hidden">
             <img
               src={anime.poster}
               alt={anime.title}

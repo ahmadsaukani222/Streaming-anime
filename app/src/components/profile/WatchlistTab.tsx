@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Clock, Play, Trash2 } from 'lucide-react';
 import type { Anime } from '@/data/animeData';
+import { getAnimeUrl } from '@/lib/slug';
 
 interface WatchlistTabProps {
   watchlist: string[];
@@ -35,7 +36,7 @@ export default function WatchlistTab({ watchlist, animeList, onRemove }: Watchli
           transition={{ delay: index * 0.05 }}
           className="group relative aspect-[3/4] rounded-xl overflow-hidden"
         >
-          <Link to={`/anime/${anime.id}`} className="block w-full h-full">
+          <Link to={getAnimeUrl(anime)} className="block w-full h-full">
             <img
               src={anime.poster}
               alt={anime.title}
