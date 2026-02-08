@@ -2,12 +2,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+    const userAgent = request.headers.get('User-Agent') || '';
 
     // Backend API URL
     const BACKEND_URL = 'https://api.animeku.xyz';
 
-    // SSR Routes - Proxy ke backend server untuk SEO/Social Sharing
-    if (path.match(/^\/anime\/[^\/]+/) || path.match(/^\/watch\/[^\/]+/)) {
+    // Detect crawlers/bots (Facebook, WhatsApp, Google, etc.)
+    const isCrawler = /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|Googlebot|bingbot|Slurp|DuckDuckBot|Applebot/i.test(userAgent);
+
+    // SSR Routes - Only for crawlers
+    if ((path.match(/^\/anime\/[^\/]+/) || path.match(/^\/watch\/[^\/]+/)) && isCrawler) {
       const backendUrl = BACKEND_URL + path + url.search;
       
       try {
@@ -16,12 +20,12 @@ export default {
           headers: {
             'Host': 'api.animeku.xyz',
             'Accept': request.headers.get('Accept') || 'text/html',
-            'User-Agent': request.headers.get('User-Agent') || '',
+            'User-Agent': userAgent,
           }
         });
         
         const newHeaders = new Headers(response.headers);
-        newHeaders.set('X-Worker-Cache', 'BYPASS');
+        newHeaders.set('X-SSR-Cache', 'BYPASS');
         
         return new Response(response.body, {
           status: response.status,
@@ -29,11 +33,10 @@ export default {
         });
       } catch (err) {
         console.error('Backend error:', err);
-        // Fallback ke static jika backend error
       }
     }
 
-    // API Routes - Proxy ke backend
+    // API Routes - Proxy ke backend untuk semua request
     if (path.startsWith('/api/') || path.startsWith('/socket.io/')) {
       const backendUrl = BACKEND_URL + path + url.search;
       
@@ -56,7 +59,7 @@ export default {
       }
     }
 
-    // Static Files - Ambil dari R2 Bucket
+    // Static Files - Ambil dari R2 Bucket (untuk browser SPA)
     let objectPath = path.slice(1) || 'index.html';
     if (objectPath.startsWith('/')) {
       objectPath = objectPath.slice(1);
@@ -64,6 +67,7 @@ export default {
 
     let object = await env.BUCKET.get(objectPath);
 
+    // SPA fallback untuk route frontend (React Router akan handle)
     if (!object && !objectPath.includes('.')) {
       object = await env.BUCKET.get('index.html');
     }
