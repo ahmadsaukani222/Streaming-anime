@@ -1,9 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { AppProvider } from '@/context/AppContext';
-import { useEffect } from 'react';
-import Lenis from 'lenis';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import BottomNav from '@/components/BottomNav';
@@ -11,42 +9,37 @@ import ScrollToTop from '@/components/ScrollToTop';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/toast';
 import PageLoader from '@/components/PageLoader';
-import GlobalChat from '@/components/GlobalChat';
-
-// ==========================================
-// CRITICAL PAGES (Eager Loaded)
-// These are the main entry points that should load immediately
-// ==========================================
-import Home from '@/pages/Home';
-import AnimeDetail from '@/pages/AnimeDetail';
-import Search from '@/pages/Search';
-import AnimeList from '@/pages/AnimeList';
-import Genres from '@/pages/Genres';
-import Schedule from '@/pages/Schedule';
-import NotFound from '@/pages/NotFound';
-import { WebsiteSchema } from '@/components/SchemaOrg';
 
 // ==========================================
 // LAZY LOADED PAGES (Code Splitting)
-// These pages are loaded on-demand to reduce initial bundle size
+// All pages loaded on-demand to reduce initial bundle
 // ==========================================
 
-// Auth Pages (only needed for login/register)
+// Core Pages
+const Home = lazy(() => import('@/pages/Home'));
+const AnimeDetail = lazy(() => import('@/pages/AnimeDetail'));
+const Search = lazy(() => import('@/pages/Search'));
+const AnimeList = lazy(() => import('@/pages/AnimeList'));
+const Genres = lazy(() => import('@/pages/Genres'));
+const Schedule = lazy(() => import('@/pages/Schedule'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
+
+// Auth Pages
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
 
-// User Pages (only needed for logged in users)
+// User Pages
 const Profile = lazy(() => import('@/pages/Profile'));
 
-// Watch Page (heavy video player, only needed when watching)
+// Watch Page (heavy video player)
 const Watch = lazy(() => import('@/pages/Watch'));
 
-// Content Pages (optional navigation)
+// Content Pages
 const Movies = lazy(() => import('@/pages/Movies'));
 const Community = lazy(() => import('@/pages/Community'));
 const DiscussionDetail = lazy(() => import('@/pages/DiscussionDetail'));
 
-// Info Pages (static content)
+// Info Pages
 const About = lazy(() => import('@/pages/About'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
@@ -54,11 +47,18 @@ const Terms = lazy(() => import('@/pages/Terms'));
 const FAQ = lazy(() => import('@/pages/FAQ'));
 const Donate = lazy(() => import('@/pages/Donate'));
 
-// Admin Page (heavy, only for admins)
+// Admin Page (heavy)
 const Admin = lazy(() => import('@/pages/Admin'));
 
+// Heavy Components (load on demand)
+const GlobalChat = lazy(() => import('@/components/GlobalChat'));
+const WebsiteSchema = lazy(() => import('@/components/SchemaOrg').then(m => ({ default: m.WebsiteSchema })));
+
+// Dynamically load Lenis only when needed
+const loadLenis = () => import('lenis').then(m => m.default || m);
+
 // ==========================================
-// Lenis Smooth Scroll Component (disabled on mobile for better performance)
+// Lenis Smooth Scroll Component (lazy loaded, disabled on mobile)
 // ==========================================
 function SmoothScroll({ children }: { children: React.ReactNode }) {
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
@@ -69,31 +69,37 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
-      smoothWheel: true,
-      touchMultiplier: 2,
-    });
-
-    // Expose Lenis instance for ScrollToTop
-    (window as any).__lenis = lenis;
-
+    let lenis: any;
     let rafId = 0;
 
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
+    // Dynamically import Lenis only on desktop
+    loadLenis().then((LenisClass) => {
+      lenis = new LenisClass({
+        duration: 1.2,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        smoothWheel: true,
+        touchMultiplier: 2,
+      });
 
-    rafId = requestAnimationFrame(raf);
+      // Expose Lenis instance for ScrollToTop
+      (window as any).__lenis = lenis;
+
+      function raf(time: number) {
+        lenis.raf(time);
+        rafId = requestAnimationFrame(raf);
+      }
+
+      rafId = requestAnimationFrame(raf);
+    });
 
     return () => {
       cancelAnimationFrame(rafId);
-      delete (window as any).__lenis;
-      lenis.destroy();
+      if (lenis) {
+        lenis.destroy();
+        delete (window as any).__lenis;
+      }
     };
   }, [isMobile]);
 
@@ -106,15 +112,39 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Critical Routes - Eager Loaded */}
-      <Route path="/" element={<Home />} />
-      <Route path="/anime/:id" element={<AnimeDetail />} />
-      <Route path="/search" element={<Search />} />
-      <Route path="/anime-list" element={<AnimeList />} />
-      <Route path="/genres" element={<Genres />} />
-      <Route path="/schedule" element={<Schedule />} />
+      {/* All Routes - Lazy Loaded for better performance */}
+      <Route path="/" element={
+        <Suspense fallback={<PageLoader />}>
+          <Home />
+        </Suspense>
+      } />
+      <Route path="/anime/:id" element={
+        <Suspense fallback={<PageLoader />}>
+          <AnimeDetail />
+        </Suspense>
+      } />
+      <Route path="/search" element={
+        <Suspense fallback={<PageLoader />}>
+          <Search />
+        </Suspense>
+      } />
+      <Route path="/anime-list" element={
+        <Suspense fallback={<PageLoader />}>
+          <AnimeList />
+        </Suspense>
+      } />
+      <Route path="/genres" element={
+        <Suspense fallback={<PageLoader />}>
+          <Genres />
+        </Suspense>
+      } />
+      <Route path="/schedule" element={
+        <Suspense fallback={<PageLoader />}>
+          <Schedule />
+        </Suspense>
+      } />
 
-      {/* Auth Routes - Lazy Loaded */}
+      {/* Auth Routes */}
       <Route path="/login" element={
         <Suspense fallback={<PageLoader />}>
           <Login />
@@ -233,13 +263,17 @@ function App() {
             <Router>
               <SmoothScroll>
                 <ScrollToTop />
-                <WebsiteSchema />
+                <Suspense fallback={null}>
+                  <WebsiteSchema />
+                </Suspense>
                 <div className="min-h-screen bg-[#0F0F1A] pb-16 sm:pb-0">
                   <Navbar />
                   <AppRoutes />
                   <Footer />
                   <BottomNav />
-                  <GlobalChat />
+                  <Suspense fallback={null}>
+                    <GlobalChat />
+                  </Suspense>
                 </div>
               </SmoothScroll>
             </Router>
