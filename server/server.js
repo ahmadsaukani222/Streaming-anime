@@ -75,6 +75,11 @@ app.use(cookieParser());
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://animeku.xyz';
 
 app.use((req, res, next) => {
+    // Skip SSR routes (anime detail & watch pages) - let them be handled by SSR handlers
+    if (req.path.match(/^\/anime\/[^\/]+/) || req.path.match(/^\/watch\/[^\/]+/)) {
+        return next();
+    }
+    
     // Skip API endpoints that should be accessible (like health check)
     if (req.path === '/' || req.path.startsWith('/api/health')) {
         return next();
@@ -164,8 +169,9 @@ app.get('/anime/:slug', async (req, res) => {
                 ? `${FRONTEND_URL}${imageUrl}` 
                 : `${FRONTEND_URL}/${imageUrl}`;
         }
-        const defaultImage = `${FRONTEND_URL}/images/hero/hero-jujutsu.jpg`;
-        const finalImage = imageUrl || defaultImage;
+        // Use logo as reliable fallback (1200x630 recommended for OG)
+        const defaultImage = `${FRONTEND_URL}/images/logo.png`;
+        const finalImage = imageUrl && imageUrl.startsWith('http') ? imageUrl : defaultImage;
         
         // Build anime URL
         const animeUrl = `${FRONTEND_URL}/anime/${anime.cleanSlug || anime.id}`;
@@ -186,6 +192,9 @@ app.get('/anime/:slug', async (req, res) => {
     <meta property="og:title" content="${anime.title} - Nonton Anime Subtitle Indonesia HD Gratis">
     <meta property="og:description" content="Nonton ${anime.title} subtitle Indonesia streaming gratis di Animeku. ${anime.synopsis ? anime.synopsis.substring(0, 150) + '...' : 'Streaming anime sub Indo HD tanpa iklan.'}">
     <meta property="og:image" content="${finalImage}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="${anime.title} - Nonton Anime Subtitle Indonesia">
     <meta property="og:site_name" content="Animeku">
     <meta property="og:locale" content="id_ID">
     
@@ -301,8 +310,9 @@ app.get('/watch/:slug/:episode', async (req, res) => {
                 ? `${FRONTEND_URL}${imageUrl}` 
                 : `${FRONTEND_URL}/${imageUrl}`;
         }
-        const defaultImage = `${FRONTEND_URL}/images/hero/hero-jujutsu.jpg`;
-        const finalImage = imageUrl || defaultImage;
+        // Use logo as reliable fallback
+        const defaultImage = `${FRONTEND_URL}/images/logo.png`;
+        const finalImage = imageUrl && imageUrl.startsWith('http') ? imageUrl : defaultImage;
         
         // Build watch URL
         const watchUrl = `${FRONTEND_URL}/watch/${anime.cleanSlug || anime.id}/${episodeNum}`;
@@ -323,6 +333,9 @@ app.get('/watch/:slug/:episode', async (req, res) => {
     <meta property="og:title" content="${anime.title} Episode ${episodeNum} - Nonton Anime Subtitle Indonesia HD">
     <meta property="og:description" content="Streaming ${anime.title} Episode ${episodeNum} subtitle Indonesia kualitas HD gratis di Animeku.">
     <meta property="og:image" content="${finalImage}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="${anime.title} Episode ${episodeNum} - Nonton Anime Subtitle Indonesia">
     <meta property="og:site_name" content="Animeku">
     <meta property="og:locale" content="id_ID">
     
