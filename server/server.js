@@ -72,6 +72,7 @@ app.use(cookieParser());
 // SITE URL CONFIG
 // ============================================
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://animeku.xyz';
+const API_URL = process.env.API_URL || 'https://api.animeku.xyz';
 
 // Helper function to escape regex special characters
 function escapeRegex(string) {
