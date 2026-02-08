@@ -3,22 +3,23 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Backend API URL
+    const BACKEND_URL = 'https://api.animeku.xyz';
+
     // SSR Routes - Proxy ke backend server untuk SEO/Social Sharing
     if (path.match(/^\/anime\/[^\/]+/) || path.match(/^\/watch\/[^\/]+/)) {
-      // Gunakan alamat IP server Anda
-      const backendUrl = 'http://45.130.164.161:5000' + path + url.search;
+      const backendUrl = BACKEND_URL + path + url.search;
       
       try {
         const response = await fetch(backendUrl, {
           method: request.method,
           headers: {
-            'Host': url.hostname,
+            'Host': 'api.animeku.xyz',
             'Accept': request.headers.get('Accept') || 'text/html',
             'User-Agent': request.headers.get('User-Agent') || '',
           }
         });
         
-        // Clone response dengan headers yang benar
         const newHeaders = new Headers(response.headers);
         newHeaders.set('X-Worker-Cache', 'BYPASS');
         
@@ -34,7 +35,7 @@ export default {
 
     // API Routes - Proxy ke backend
     if (path.startsWith('/api/') || path.startsWith('/socket.io/')) {
-      const backendUrl = 'http://45.130.164.161:5000' + path + url.search;
+      const backendUrl = BACKEND_URL + path + url.search;
       
       try {
         const response = await fetch(backendUrl, {
@@ -55,17 +56,14 @@ export default {
       }
     }
 
-    // Static Files - Ambil dari R2 Bucket (menggunakan env.BUCKET yang sudah ter-binding)
+    // Static Files - Ambil dari R2 Bucket
     let objectPath = path.slice(1) || 'index.html';
-    
-    // Hapus leading slash jika ada
     if (objectPath.startsWith('/')) {
       objectPath = objectPath.slice(1);
     }
 
     let object = await env.BUCKET.get(objectPath);
 
-    // SPA fallback untuk route frontend
     if (!object && !objectPath.includes('.')) {
       object = await env.BUCKET.get('index.html');
     }

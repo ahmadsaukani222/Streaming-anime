@@ -72,6 +72,7 @@ app.use(cookieParser());
 // SITE URL CONFIG
 // ============================================
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://animeku.xyz';
+const API_URL = process.env.API_URL || 'https://api.animeku.xyz';
 
 // Helper function to escape regex special characters
 function escapeRegex(string) {
@@ -195,29 +196,17 @@ app.get('/anime/:slug', async (req, res) => {
     }
     </script>
     
-    <!-- Redirect to actual SPA -->
-    <meta http-equiv="refresh" content="0;url=${animeUrl}">
-    <script>
-        window.location.href = "${animeUrl}";
-    </script>
-    
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; }
-        a { color: #6C5DD3; text-decoration: none; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #6C5DD3; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+    <!-- No redirect - Let React Router handle the route -->
 </head>
 <body>
-    <div class="spinner"></div>
-    <p>Loading ${anime.title}...</p>
-    <p>If not redirected, <a href="${animeUrl}">click here</a>.</p>
+    <!-- React SPA will handle this route -->
+    <div id="root"></div>
     
-    <!-- Hidden content for crawlers -->
-    <div style="display:none;">
+    <!-- Hidden content for crawlers (SEO) -->
+    <div style="display:none;" aria-hidden="true">
         <h1>${anime.title}</h1>
         <p>${anime.synopsis || ''}</p>
-        <img src="${finalImage}" alt="${anime.title}">
+        <img src="${finalImage}" alt="${anime.title}" loading="lazy">
     </div>
 </body>
 </html>`;
@@ -336,29 +325,17 @@ app.get('/watch/:slug/:episode', async (req, res) => {
     }
     </script>
     
-    <!-- Redirect to actual SPA -->
-    <meta http-equiv="refresh" content="0;url=${watchUrl}">
-    <script>
-        window.location.href = "${watchUrl}";
-    </script>
-    
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; }
-        a { color: #6C5DD3; text-decoration: none; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #6C5DD3; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+    <!-- No redirect - Let React Router handle the route -->
 </head>
 <body>
-    <div class="spinner"></div>
-    <p>Loading ${anime.title} Episode ${episodeNum}...</p>
-    <p>If not redirected, <a href="${watchUrl}">click here</a>.</p>
+    <!-- React SPA will handle this route -->
+    <div id="root"></div>
     
-    <!-- Hidden content for crawlers -->
-    <div style="display:none;">
+    <!-- Hidden content for crawlers (SEO) -->
+    <div style="display:none;" aria-hidden="true">
         <h1>${anime.title} Episode ${episodeNum}</h1>
         <p>Streaming ${anime.title} Episode ${episodeNum} subtitle Indonesia kualitas HD gratis di Animeku.</p>
-        <img src="${finalImage}" alt="${anime.title}">
+        <img src="${finalImage}" alt="${anime.title}" loading="lazy">
     </div>
 </body>
 </html>`;
