@@ -21,6 +21,21 @@ const siteConfig = {
   defaultKeywords: 'nonton anime subtitle indonesia, streaming anime sub indo, nonton anime gratis, download anime sub indo, anime ongoing, anime terbaru, animeku, anime hd',
 };
 
+// Helper function to ensure image URL is absolute
+function getAbsoluteImageUrl(imageUrl: string | undefined): string {
+  if (!imageUrl) return siteConfig.defaultImage;
+  // If already absolute URL, return as is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  // If relative URL, prepend site URL
+  if (imageUrl.startsWith('/')) {
+    return `${siteConfig.url}${imageUrl}`;
+  }
+  // If no leading slash, add it
+  return `${siteConfig.url}/${imageUrl}`;
+}
+
 export function SEO({
   title,
   description = siteConfig.defaultDescription,
@@ -133,12 +148,15 @@ export function AnimeDetailSEO({
   year?: number;
   studio?: string;
 }) {
+  // Ensure image URL is absolute for social media sharing
+  const absoluteImage = getAbsoluteImageUrl(image);
+  
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'TVSeries',
     name: title,
     description: description,
-    image: image,
+    image: absoluteImage,
     url: `${siteConfig.url}${url}`,
     ...(rating && parseFloat(rating) > 0 && { 
       aggregateRating: {
@@ -182,7 +200,7 @@ export function AnimeDetailSEO({
       title={title}
       description={description}
       canonical={url}
-      ogImage={image}
+      ogImage={absoluteImage}
       ogType="video.tv_show"
       jsonLd={jsonLd}
     />
@@ -206,12 +224,15 @@ export function WatchSEO({
   episode?: number;
   duration?: string; // Format: PT24M (ISO 8601 duration)
 }) {
+  // Ensure image URL is absolute for social media sharing
+  const absoluteImage = getAbsoluteImageUrl(image);
+  
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'VideoObject',
     name: `${title} ${episode ? `- Episode ${episode}` : ''}`,
     description: description,
-    thumbnailUrl: image,
+    thumbnailUrl: absoluteImage,
     uploadDate: new Date().toISOString(),
     duration: duration || 'PT24M', // Default 24 minutes
     ...(videoUrl && { contentUrl: videoUrl, embedUrl: videoUrl }),
@@ -239,7 +260,7 @@ export function WatchSEO({
       title={`${title} ${episode ? `Episode ${episode}` : ''}`}
       description={description}
       canonical={url}
-      ogImage={image}
+      ogImage={absoluteImage}
       ogType="video"
       ogVideo={videoUrl}
       jsonLd={jsonLd}

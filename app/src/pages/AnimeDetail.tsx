@@ -42,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BACKEND_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
-import { generateCleanSlug } from '@/lib/slug';
+import { generateCleanSlug, getAnimeUrl } from '@/lib/slug';
 
 export default function AnimeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -268,7 +268,7 @@ export default function AnimeDetail() {
           title={anime.title}
           description={anime.synopsis || `Nonton ${anime.title} subtitle Indonesia streaming gratis di Animeku`}
           image={anime.banner || anime.poster}
-          url={`/anime/${anime.id}`}
+          url={getAnimeUrl(anime)}
           rating={String(anime.rating)}
           genres={anime.genres}
           status={anime.status}
