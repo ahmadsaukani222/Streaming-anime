@@ -197,31 +197,16 @@ app.get('/anime/:slug', async (req, res) => {
     </script>
     
     <!-- No redirect - Let React Router handle the route -->
-    
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; }
-        a { color: #6C5DD3; text-decoration: none; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #6C5DD3; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
 </head>
 <body>
-    <!-- React will mount here and take over -->
-    <div id="root">
-        <div style="font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; min-height: 100vh;">
-            <div class="spinner"></div>
-            <p>Loading ${anime.title}...</p>
-        </div>
-    </div>
+    <!-- React SPA will handle this route -->
+    <div id="root"></div>
     
-    <!-- App will be loaded by React -->
-    <script type="module" src="${FRONTEND_URL}/src/main.tsx"></script>
-    
-    <!-- Hidden content for crawlers -->
-    <div style="display:none;">
+    <!-- Hidden content for crawlers (SEO) -->
+    <div style="display:none;" aria-hidden="true">
         <h1>${anime.title}</h1>
         <p>${anime.synopsis || ''}</p>
-        <img src="${finalImage}" alt="${anime.title}">
+        <img src="${finalImage}" alt="${anime.title}" loading="lazy">
     </div>
 </body>
 </html>`;
@@ -341,31 +326,16 @@ app.get('/watch/:slug/:episode', async (req, res) => {
     </script>
     
     <!-- No redirect - Let React Router handle the route -->
-    
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; }
-        a { color: #6C5DD3; text-decoration: none; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #6C5DD3; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
 </head>
 <body>
-    <!-- React will mount here and take over -->
-    <div id="root">
-        <div style="font-family: system-ui, -apple-system, sans-serif; background: #0F0F1A; color: white; text-align: center; padding: 50px 20px; min-height: 100vh;">
-            <div class="spinner"></div>
-            <p>Loading ${anime.title} Episode ${episodeNum}...</p>
-        </div>
-    </div>
+    <!-- React SPA will handle this route -->
+    <div id="root"></div>
     
-    <!-- App will be loaded by React -->
-    <script type="module" src="${FRONTEND_URL}/src/main.tsx"></script>
-    
-    <!-- Hidden content for crawlers -->
-    <div style="display:none;">
+    <!-- Hidden content for crawlers (SEO) -->
+    <div style="display:none;" aria-hidden="true">
         <h1>${anime.title} Episode ${episodeNum}</h1>
         <p>Streaming ${anime.title} Episode ${episodeNum} subtitle Indonesia kualitas HD gratis di Animeku.</p>
-        <img src="${finalImage}" alt="${anime.title}">
+        <img src="${finalImage}" alt="${anime.title}" loading="lazy">
     </div>
 </body>
 </html>`;
