@@ -53,7 +53,7 @@ const customAnimeSchema = new mongoose.Schema({
 });
 
 // Auto-generate cleanSlug before saving
-customAnimeSchema.pre('save', function(next) {
+customAnimeSchema.pre('save', async function () {
     if (this.title && !this.cleanSlug) {
         this.cleanSlug = this.title
             .toLowerCase()
@@ -62,7 +62,6 @@ customAnimeSchema.pre('save', function(next) {
             .replace(/-+/g, '-') // Multiple dash jadi satu
             .replace(/^-|-$/g, ''); // Hapus dash di awal/akhir
     }
-    next();
 });
 
 // Helper function to generate clean slug from title
@@ -82,41 +81,41 @@ function escapeRegex(string) {
 }
 
 // Method to find anime by either id or cleanSlug
-customAnimeSchema.statics.findBySlug = async function(slug) {
+customAnimeSchema.statics.findBySlug = async function (slug) {
     // Escape regex special characters untuk pencarian yang aman
     const safeSlug = escapeRegex(slug);
-    
+
     // 1. Coba cari langsung dengan id (format exact match)
     let anime = await this.findOne({ id: slug });
     if (anime) return anime;
-    
+
     // 2. Coba cari dengan cleanSlug
     anime = await this.findOne({ cleanSlug: slug });
     if (anime) return anime;
-    
+
     // 3. Coba cari dengan id yang mengandung slug (partial match di awal)
     // Contoh: slug = "naruto", id = "naruto-shippuden-123"
     anime = await this.findOne({ id: { $regex: new RegExp(`^${safeSlug}[-\d]`, 'i') } });
     if (anime) return anime;
-    
+
     // 4. Coba cari dengan id yang mengandung slug (partial match di mana saja)
     anime = await this.findOne({ id: { $regex: new RegExp(safeSlug, 'i') } });
     if (anime) return anime;
-    
+
     // 5. Coba cari dengan title (case insensitive)
     const slugWithSpaces = slug.replace(/-/g, ' ');
     const safeSlugWithSpaces = escapeRegex(slugWithSpaces);
-    anime = await this.findOne({ 
-        title: { $regex: new RegExp(`^${safeSlugWithSpaces}$`, 'i') } 
+    anime = await this.findOne({
+        title: { $regex: new RegExp(`^${safeSlugWithSpaces}$`, 'i') }
     });
     if (anime) return anime;
-    
+
     // 6. Coba cari dengan title yang mengandung (partial match)
-    anime = await this.findOne({ 
-        title: { $regex: new RegExp(safeSlugWithSpaces, 'i') } 
+    anime = await this.findOne({
+        title: { $regex: new RegExp(safeSlugWithSpaces, 'i') }
     });
     if (anime) return anime;
-    
+
     // 7. Coba ekstrak ID angka dari format lama (contoh: naruto-12345)
     const match = slug.match(/-?(\d+)$/);
     if (match) {
@@ -125,7 +124,7 @@ customAnimeSchema.statics.findBySlug = async function(slug) {
         anime = await this.findOne({ id: { $regex: `-${possibleId}$` } });
         if (anime) return anime;
     }
-    
+
     return null;
 };
 
