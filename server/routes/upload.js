@@ -14,9 +14,67 @@ const Notification = require('../models/Notification');
 const ScheduleSubscription = require('../models/ScheduleSubscription');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
+const { generateThumbnailWithRetry } = require('../utils/thumbnail-generator');
 
 router.use(requireAuth);
 router.use(requireAdmin);
+
+/**
+ * Generate thumbnail key for episode
+ * @param {string} animeTitle - Anime title
+ * @param {number} episode - Episode number
+ * @returns {string}
+ */
+function generateThumbnailKey(animeTitle, episode) {
+    const slug = animeTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    return `thumbnails/${slug}/ep-${episode}.jpg`;
+}
+
+/**
+ * Generate and upload thumbnail for episode
+ * @param {string} videoUrl - Public URL of the video
+ * @param {string} animeTitle - Anime title
+ * @param {number} episode - Episode number
+ * @returns {Promise<string|null>} - Thumbnail URL or null if failed
+ */
+async function generateAndUploadThumbnail(videoUrl, animeTitle, episode) {
+    try {
+        console.log(`[Thumbnail] Starting generation for ${animeTitle} Episode ${episode}`);
+        
+        // Generate thumbnail from video
+        const thumbnailBuffer = await generateThumbnailWithRetry(videoUrl, {
+            time: 5,      // Capture at 5 seconds
+            width: 1280,  // HD resolution
+            height: 720
+        }, 3);
+        
+        // Generate key for thumbnail
+        const thumbnailKey = generateThumbnailKey(animeTitle, episode);
+        
+        // Upload thumbnail to R2 (frontend bucket for CDN)
+        const uploadResult = await r2.uploadFile(
+            thumbnailBuffer,
+            thumbnailKey,
+            'image/jpeg',
+            'frontend'  // Use frontend bucket for thumbnails
+        );
+        
+        if (!uploadResult.success) {
+            throw new Error(`Failed to upload thumbnail: ${uploadResult.error}`);
+        }
+        
+        console.log(`[Thumbnail] Generated and uploaded: ${uploadResult.url}`);
+        return uploadResult.url;
+        
+    } catch (err) {
+        console.error(`[Thumbnail] Error generating thumbnail for ${animeTitle} Ep ${episode}:`, err.message);
+        // Return null so upload can continue even if thumbnail fails
+        return null;
+    }
+}
 
 // Create temp upload directory
 const uploadDir = path.join(__dirname, '../temp_uploads');
@@ -257,6 +315,22 @@ router.post('/confirm', validateBody([
                     await anime.save();
                     console.log(`[Upload] Saved episodeData for ${animeTitle} - Episode ${episodeNum} now has ${anime.episodeData[epIndex].streams.length} streams`);
 
+                    // Auto-generate thumbnail for the episode (async, don't block response)
+                    (async () => {
+                        try {
+                            const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, animeTitle, episodeNum);
+                            if (thumbnailUrl) {
+                                // Update episode data with thumbnail
+                                anime.episodeData[epIndex].thumbnail = thumbnailUrl;
+                                anime.markModified('episodeData');
+                                await anime.save();
+                                console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                            }
+                        } catch (thumbErr) {
+                            console.error('[Upload] Thumbnail generation error:', thumbErr.message);
+                        }
+                    })();
+
                     // Send notifications to subscribed users
                     try {
                         const subscribers = await ScheduleSubscription.find({
@@ -422,6 +496,25 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     }
                     await anime.save();
                     console.log(`[Upload] Updated episodeData for ${animeTitle}`);
+
+                    // Auto-generate thumbnail for the episode (async, don't block response)
+                    (async () => {
+                        try {
+                            const thumbnailUrl = await generateAndUploadThumbnail(result.url, animeTitle, episodeNum);
+                            if (thumbnailUrl) {
+                                // Update episode data with thumbnail
+                                const epIdx = anime.episodeData.findIndex(e => e.ep === episodeNum);
+                                if (epIdx !== -1) {
+                                    anime.episodeData[epIdx].thumbnail = thumbnailUrl;
+                                    anime.markModified('episodeData');
+                                    await anime.save();
+                                    console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                                }
+                            }
+                        } catch (thumbErr) {
+                            console.error('[Upload] Thumbnail generation error:', thumbErr.message);
+                        }
+                    })();
                 }
             } catch (dbErr) {
                 console.error('[Upload] DB update error:', dbErr);
@@ -500,6 +593,72 @@ router.get('/list', async (req, res) => {
     } catch (error) {
         console.error('[Upload] List error:', error);
         res.status(500).json({ error: error.message || 'List failed' });
+    }
+});
+
+/**
+ * POST /api/upload/regenerate-thumbnail
+ * Regenerate thumbnail for a specific episode
+ * Body: { animeId: string, episode: number }
+ */
+router.post('/regenerate-thumbnail', validateBody([
+    { field: 'animeId', required: true, type: 'string', minLength: 1, maxLength: 200 },
+    { field: 'episode', required: true, type: 'number', integer: true, min: 1 }
+]), async (req, res) => {
+    try {
+        const { animeId, episode } = req.body;
+        const episodeNum = parseInt(episode);
+
+        console.log(`[Upload] Regenerating thumbnail for anime ${animeId} Episode ${episodeNum}`);
+
+        // Find anime
+        let anime = await CustomAnime.findOne({ id: animeId });
+        if (!anime && animeId.match(/^[0-9a-fA-F]{24}$/)) {
+            anime = await CustomAnime.findById(animeId);
+        }
+
+        if (!anime) {
+            return res.status(404).json({ error: 'Anime not found' });
+        }
+
+        // Find episode data
+        const epData = anime.episodeData?.find(e => e.ep === episodeNum);
+        if (!epData || !epData.streams || epData.streams.length === 0) {
+            return res.status(404).json({ error: 'Episode not found or no video available' });
+        }
+
+        // Get video URL (prefer direct streams)
+        const directStream = epData.streams.find(s => s.type === 'direct');
+        const videoUrl = directStream?.url || epData.streams[0]?.url;
+
+        if (!videoUrl) {
+            return res.status(404).json({ error: 'No video URL found for episode' });
+        }
+
+        // Generate thumbnail
+        const thumbnailUrl = await generateAndUploadThumbnail(videoUrl, anime.title, episodeNum);
+
+        if (!thumbnailUrl) {
+            return res.status(500).json({ error: 'Failed to generate thumbnail' });
+        }
+
+        // Update database
+        const epIndex = anime.episodeData.findIndex(e => e.ep === episodeNum);
+        anime.episodeData[epIndex].thumbnail = thumbnailUrl;
+        anime.markModified('episodeData');
+        await anime.save();
+
+        res.json({
+            success: true,
+            message: 'Thumbnail regenerated successfully',
+            thumbnailUrl,
+            episode: episodeNum,
+            anime: anime.title
+        });
+
+    } catch (error) {
+        console.error('[Upload] Regenerate thumbnail error:', error);
+        res.status(500).json({ error: error.message || 'Failed to regenerate thumbnail' });
     }
 });
 
