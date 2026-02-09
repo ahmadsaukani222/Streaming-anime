@@ -66,7 +66,7 @@ const HorizontalSection = memo(function HorizontalSection({
       {/* Horizontal Scroll */}
       <div 
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2"
+        className="flex gap-4 overflow-x-auto scrollbar-hide px-4 pb-2"
       >
         {displayAnime.map((anime, index) => (
           <AnimeCardMobile 
@@ -111,7 +111,7 @@ const ListSection = memo(function ListSection({
       </div>
 
       {/* List */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {displayAnime.map((anime, index) => (
           <AnimeCardMobile 
             key={anime.id} 
@@ -155,7 +155,7 @@ const GridSection = memo(function GridSection({
       </div>
 
       {/* Grid - 3 columns */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         {displayAnime.map((anime, index) => (
           <AnimeCardMobile 
             key={anime.id} 
@@ -191,7 +191,7 @@ const ContinueSection = memo(function ContinueSection({
       </div>
 
       {/* List with progress */}
-      <div className="px-4 space-y-2">
+      <div className="px-4 space-y-3">
         {displayAnime.map((anime, index) => {
           const progress = progressData.find(p => p.animeId === anime.id);
           return (

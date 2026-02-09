@@ -1,29 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { fetchSkipTimes, type SkipTimes } from '@/services/aniskip';
 import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize,
-  SkipBack,
-  SkipForward,
-  ChevronLeft,
-  Share2,
-  Flag,
   List,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
-  Settings,
-  Monitor,
-  PictureInPicture2,
-  Sun,
-  Keyboard,
-  Camera,
-  Repeat,
-  FastForward,
-  Film,
-  Users
+  Play
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -32,6 +14,7 @@ import AnimeCard from '@/components/AnimeCard';
 import CommentSection from '@/components/CommentSection';
 import NobarRoom from '@/components/WatchPartyRoom';
 import NobarLobby from '@/components/WatchPartyLobby';
+import VideoPlayer from '@/components/VideoPlayer';
 import { apiFetch } from '@/lib/api';
 import { WatchSEO } from '@/components/Seo';
 import { VideoSchema, BreadcrumbSchema } from '@/components/SchemaOrg';
@@ -73,43 +56,45 @@ export default function Watch() {
   const [searchParams] = useSearchParams();
   const roomFromUrl = searchParams.get('room');
   const { animeList, updateWatchProgress, user } = useApp();
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  const [isEmbed, setIsEmbed] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [showControls, setShowControls] = useState(true);
-  const [selectedServer, setSelectedServer] = useState('server1');
-  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // UI Enhancement States
   const [isTheaterMode, setIsTheaterMode] = useState(false);
-  const [brightness, setBrightness] = useState(100);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [showSettings, setShowSettings] = useState(false);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
-  // Refs for keyboard shortcuts (to avoid stale closure)
-  const togglePlayRef = useRef<(() => void) | undefined>(undefined);
-  const toggleFullscreenRef = useRef<(() => void) | undefined>(undefined);
+  // Video streaming states
+  const [isEmbed, setIsEmbed] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [subtitleUrl, setSubtitleUrl] = useState<string>('');
+  const [autoNextEnabled, setAutoNextEnabled] = useState(true);
+  const [selectedQuality, setSelectedQuality] = useState<string>('');
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
+  const [selectedServer, setSelectedServer] = useState('server1');
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [skipTimes, setSkipTimes] = useState<SkipTimes | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const durationRef = useRef<number>(0);
 
   // Fallback state for anime data (if not found in context/props)
-  // This handles direct navigation or refresh
   const [apiAnime, setApiAnime] = useState<any>(undefined);
   const contextAnime = id ? animeList.find(a => {
-    // 1. Cek exact match dengan id
-    if (a.id === id) return true;
-    // 2. Cek match dengan cleanSlug yang tersimpan
+    // Exact match berdasarkan cleanSlug (prioritas tertinggi)
     if (a.cleanSlug === id) return true;
-    // 3. Cek match dengan slug yang di-generate dari title
-    // Ini untuk handle anime lama yang belum memiliki cleanSlug di database
+    
+    // Exact match berdasarkan generated slug dari title
     const generatedSlug = generateCleanSlug(a.title);
     if (generatedSlug === id) return true;
-    // 4. Cek partial match dengan id (untuk backward compatibility)
-    if (a.id.startsWith(id + '-')) return true;
+    
+    // Exact match berdasarkan ID asli
+    if (a.id === id) return true;
+    
+    // Cek apakah id mengandung angka di akhir (format: slug-12345)
+    // Hanya match jika ID asli persis sama, bukan hanya startsWith
+    // Ini mencegah 'sousou-no-frieren' match dengan 'sousou-no-frieren-2nd-season'
+    const idPattern = new RegExp(`^${id}-\\d+$`);
+    if (idPattern.test(a.id)) return true;
+    
     return false;
   }) : undefined;
   const anime = contextAnime || apiAnime;
@@ -120,28 +105,93 @@ export default function Watch() {
   })();
   const totalEpisodes = anime?.episodes || 1;
 
-  // Video streaming states
-  const [videoUrl, setVideoUrl] = useState<string>('');
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [downloadStreams, setDownloadStreams] = useState<any[]>([]);
-  const [subtitleUrl, setSubtitleUrl] = useState<string>('');
+  // Fallback intro time jika AniSkip tidak tersedia
+  // Default 1:25 (kebanyakan anime)
+  const introTime = useMemo(() => {
+    const title = anime?.title?.toLowerCase() || '';
+    const malId = anime?.id || anime?.malId;
+    
+    // Hardcode untuk anime yang kita tahu intro-nya
+    // Fumetsu no Anata e (To Your Eternity) - intro 0:48
+    if (malId === '59853' || title.includes('fumetsu') || title.includes('to your eternity')) {
+      return 48;
+    }
+    
+    // Jujutsu Kaisen - intro 1:30
+    if (title.includes('jujutsu kaisen')) return 90;
+    
+    // Attack on Titan - intro 1:30
+    if (title.includes('attack on titan') || title.includes('shingeki no kyojin')) return 90;
+    
+    // Demon Slayer - intro 1:30
+    if (title.includes('demon slayer') || title.includes('kimetsu no yaiba')) return 90;
+    
+    // One Piece - intro 2:00 (sering berubah)
+    if (title.includes('one piece')) return 120;
+    
+    // Default 1:25 (kebanyakan anime)
+    return 85;
+  }, [anime?.title, anime?.id, anime?.malId]);
 
-  // Advanced Playback States
-  const [buffered, setBuffered] = useState(0);
-  const [autoNextEnabled, setAutoNextEnabled] = useState(true);
-  const [showSkipIntro, setShowSkipIntro] = useState(false);
-  const [isLooping, setIsLooping] = useState(false);
-
-  // Quality Selection States
-  const [selectedQuality, setSelectedQuality] = useState<string>('');
-  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
-  const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
-  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  // Generate chapters based on AniSkip data or fallback
+  const chapters = useMemo(() => {
+    if (duration <= 0) return [];
+    
+    const result = [];
+    
+    // Opening marker (from AniSkip or fallback)
+    if (skipTimes?.op) {
+      result.push({ time: skipTimes.op.startTime, label: 'Opening', color: '#FF6B6B' });
+      result.push({ time: skipTimes.op.endTime, label: 'Intro End', color: '#4ECDC4' });
+    } else {
+      result.push({ time: 0, label: 'Opening', color: '#FF6B6B' });
+      result.push({ time: introTime, label: 'Intro End', color: '#4ECDC4' });
+    }
+    
+    // Ending marker (from AniSkip or fallback)
+    if (skipTimes?.ed) {
+      result.push({ time: skipTimes.ed.startTime, label: 'Ending Start', color: '#FFE66D' });
+      result.push({ time: skipTimes.ed.endTime, label: 'Ending End', color: '#FF6B9D' });
+    } else if (duration > 300) {
+      result.push({ time: duration - 90, label: 'Ending Start', color: '#FFE66D' });
+    }
+    
+    // Episode end
+    result.push({ time: duration - 5, label: 'Episode End', color: '#95E1D3' });
+    
+    return result;
+  }, [duration, introTime, skipTimes]);
 
   // Nobar State
   const [showNobar, setShowNobar] = useState(false);
   const [nobarRoomId, setNobarRoomId] = useState<string | undefined>();
+
+  // Fetch AniSkip data (auto-detected intro/outro)
+  useEffect(() => {
+    const loadSkipTimes = async () => {
+      if (!anime?.id) {
+        setSkipTimes(null);
+        return;
+      }
+      
+      // Extract MAL ID from anime data (if available)
+      // Fallback: use anime.id as identifier
+      const malId = anime.malId || anime.id;
+      
+      logger.log('[Watch] Fetching AniSkip data for:', anime.title, 'EP', currentEpisode);
+      const times = await fetchSkipTimes(malId, currentEpisode);
+      
+      if (times) {
+        logger.log('[Watch] AniSkip found:', times);
+        setSkipTimes(times);
+      } else {
+        logger.log('[Watch] AniSkip not found, using fallback');
+        setSkipTimes(null);
+      }
+    };
+    
+    loadSkipTimes();
+  }, [anime?.id, anime?.title, anime?.malId, currentEpisode]);
 
   // Auto-join room from URL query param
   useEffect(() => {
@@ -206,8 +256,6 @@ export default function Watch() {
         // Filter video streams
         const directStreams = data.streams.filter((s: any) => s.type === 'direct'); // R2 Cloud
         const embedStreams = data.streams.filter((s: any) => s.type === 'embed');
-        const downloadStreams = data.streams.filter((s: any) => s.type === 'download');
-        setDownloadStreams(downloadStreams);
         setAllDirectStreams(directStreams);
 
         // Set subtitle URL if available
@@ -229,6 +277,7 @@ export default function Watch() {
             return numB - numA;
           });
         const uniqueQualities = [...new Set(qualities)] as string[];
+        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length);
         setAvailableQualities(uniqueQualities);
 
         let selectedStream;
@@ -238,6 +287,8 @@ export default function Watch() {
           // If quality is selected, use that, otherwise use highest quality
           const targetQuality = selectedQuality || uniqueQualities[0] || '';
           selectedStream = directStreams.find((s: any) => s.quality === targetQuality) || directStreams[0];
+
+          logger.log('[Watch] Selected quality:', targetQuality, 'Stream found:', selectedStream?.quality, 'URL:', selectedStream?.url?.substring(0, 50) + '...');
 
           // Update selected quality state if not set
           if (!selectedQuality && selectedStream.quality) {
@@ -270,168 +321,23 @@ export default function Watch() {
     };
 
     fetchVideoUrl();
-  }, [currentEpisode, anime, selectedServer]);
+  }, [currentEpisode, anime, selectedServer, selectedQuality]);
 
   // NOTE: Keyboard shortcuts are handled in the handleKeyDown useEffect below (line ~506)
   // This avoids duplicate event listeners for better performance
 
 
-  // Auto-hide controls while playing
+  // Auto-save progress every 10 seconds
   useEffect(() => {
-    // Save progress every 10 seconds
     const interval = setInterval(() => {
-      if (videoRef.current && id && isPlaying) {
+      if (videoRef.current && id && !videoRef.current.paused) {
         const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
         updateWatchProgress(id, `ep-${currentEpisode}`, currentEpisode, progress);
       }
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [id, currentEpisode, isPlaying, updateWatchProgress]);
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
-    }, 3000);
-  };
-
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(err => {
-          logger.error('[Watch] Play error:', err);
-        });
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  // Update refs when functions change
-  togglePlayRef.current = togglePlay;
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const toggleFullscreen = () => {
-    const videoContainer = videoContainerRef.current;
-    const video = videoRef.current as any;
-
-    if (!videoContainer && !video) return;
-
-    // Check if already in fullscreen
-    const isFullscreen = document.fullscreenElement ||
-      (document as any).webkitFullscreenElement ||
-      (document as any).mozFullScreenElement ||
-      (document as any).msFullscreenElement;
-
-    if (!isFullscreen) {
-      // Detect iOS Safari
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      // On iOS, always use video element's native fullscreen
-      if (isIOS && video) {
-        if (video.webkitEnterFullscreen) {
-          video.webkitEnterFullscreen();
-          return;
-        } else if (video.webkitRequestFullscreen) {
-          video.webkitRequestFullscreen();
-          return;
-        }
-      }
-
-      // Desktop and Android: try container fullscreen first
-      if (videoContainer) {
-        if (videoContainer.requestFullscreen) {
-          videoContainer.requestFullscreen().catch(() => tryVideoFullscreen());
-        } else if ((videoContainer as any).webkitRequestFullscreen) {
-          (videoContainer as any).webkitRequestFullscreen();
-        } else if ((videoContainer as any).mozRequestFullScreen) {
-          (videoContainer as any).mozRequestFullScreen();
-        } else if ((videoContainer as any).msRequestFullscreen) {
-          (videoContainer as any).msRequestFullscreen();
-        } else {
-          tryVideoFullscreen();
-        }
-      } else {
-        tryVideoFullscreen();
-      }
-    } else {
-      // Exit fullscreen
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        (document as any).mozCancelFullScreen();
-      } else if ((document as any).msExitFullscreen) {
-        (document as any).msExitFullscreen();
-      }
-    }
-  };
-
-  // Update refs when functions change
-  toggleFullscreenRef.current = toggleFullscreen;
-
-  // Fallback fullscreen for iOS Safari (uses video element's native fullscreen)
-  const tryVideoFullscreen = () => {
-    const video = videoRef.current as any;
-    if (!video) return;
-
-    if (video.webkitEnterFullscreen) {
-      // iOS Safari
-      video.webkitEnterFullscreen();
-    } else if (video.webkitRequestFullscreen) {
-      video.webkitRequestFullscreen();
-    } else if (video.requestFullscreen) {
-      video.requestFullscreen();
-    }
-  };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  }, [id, currentEpisode, updateWatchProgress]);
 
   const goToEpisode = (epNum: number) => {
     if (epNum >= 1 && epNum <= totalEpisodes && id) {
@@ -439,241 +345,11 @@ export default function Watch() {
     }
   };
 
-  // Skip forward/backward by seconds
-  const skip = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, Math.min(duration, videoRef.current.currentTime + seconds));
-    }
-  };
-
-  // Toggle Picture-in-Picture
-  const togglePiP = async () => {
-    if (!videoRef.current) return;
-    try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-      } else {
-        await videoRef.current.requestPictureInPicture();
-      }
-    } catch (err) {
-      logger.error('[Watch] PiP error:', err);
-    }
-  };
-
-  // Change playback speed
-  const changePlaybackSpeed = () => {
-    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
-    const currentIndex = speeds.indexOf(playbackSpeed);
-    const nextIndex = (currentIndex + 1) % speeds.length;
-    const newSpeed = speeds[nextIndex];
-    setPlaybackSpeed(newSpeed);
-    if (videoRef.current) {
-      videoRef.current.playbackRate = newSpeed;
-    }
-  };
-
-  // Double-click handler for seek
-  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoContainerRef.current) return;
-    const rect = videoContainerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const isLeftSide = x < rect.width / 2;
-    skip(isLeftSide ? -10 : 10);
-  };
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      switch (e.key.toLowerCase()) {
-        case ' ':
-        case 'k':
-          e.preventDefault();
-          togglePlay();
-          break;
-        case 'arrowleft':
-        case 'j':
-          e.preventDefault();
-          skip(-10);
-          break;
-        case 'arrowright':
-        case 'l':
-          e.preventDefault();
-          skip(10);
-          break;
-        case 'arrowup':
-          e.preventDefault();
-          if (videoRef.current) {
-            const newVol = Math.min(1, volume + 0.1);
-            videoRef.current.volume = newVol;
-            setVolume(newVol);
-          }
-          break;
-        case 'arrowdown':
-          e.preventDefault();
-          if (videoRef.current) {
-            const newVol = Math.max(0, volume - 0.1);
-            videoRef.current.volume = newVol;
-            setVolume(newVol);
-          }
-          break;
-        case 'm':
-          e.preventDefault();
-          toggleMute();
-          break;
-        case 'f':
-          e.preventDefault();
-          toggleFullscreen();
-          break;
-        case 't':
-          e.preventDefault();
-          setIsTheaterMode(!isTheaterMode);
-          break;
-        case 'p':
-          e.preventDefault();
-          togglePiP();
-          break;
-        case 's':
-          e.preventDefault();
-          changePlaybackSpeed();
-          break;
-        case 'n':
-          e.preventDefault();
-          goToEpisode(currentEpisode + 1);
-          break;
-        case 'b':
-          e.preventDefault();
-          goToEpisode(currentEpisode - 1);
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, volume, isMuted, isTheaterMode, playbackSpeed, currentEpisode, totalEpisodes]);
-
-  // Resume Playback - Save position to database
-  const userId = user?.id;
-
-  // Load saved position from database
-  useEffect(() => {
-    const loadProgress = async () => {
-      if (!id || !currentEpisode || !userId) return;
-      try {
-        const res = await apiFetch(`${BACKEND_URL}/api/watch-progress/${id}/${currentEpisode}?userId=${userId}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.currentTime > 5 && videoRef.current && duration > 0 && data.currentTime < duration - 10) {
-            videoRef.current.currentTime = data.currentTime;
-            logger.log('[Watch] Resumed from', formatTime(data.currentTime));
-          }
-        }
-      } catch (err) {
-        logger.warn('[Watch] Failed to load progress from DB');
-      }
-    };
-    if (videoUrl && duration > 0) {
-      loadProgress();
-    }
-  }, [videoUrl, duration, id, currentEpisode, userId]);
-
-  // Save progress periodically to database
-  useEffect(() => {
-    const saveInterval = setInterval(async () => {
-      if (videoRef.current && currentTime > 5 && id && currentEpisode && userId) {
-        try {
-          await apiFetch(`${BACKEND_URL}/api/watch-progress/${id}/${currentEpisode}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              currentTime,
-              duration,
-              completed: false
-            })
-          });
-        } catch (err) {
-          logger.warn('[Watch] Failed to save progress to DB');
-        }
-      }
-    }, 10000); // Save every 10 seconds
-    return () => clearInterval(saveInterval);
-  }, [currentTime, duration, id, currentEpisode, userId]);
-
-  // Buffer Progress Tracking
-  const handleProgress = () => {
-    if (videoRef.current && videoRef.current.buffered.length > 0) {
-      const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-      setBuffered((bufferedEnd / duration) * 100);
-    }
-  };
-
-  // Show Skip Intro button (first 120 seconds)
-  useEffect(() => {
-    if (currentTime >= 5 && currentTime <= 120) {
-      setShowSkipIntro(true);
-    } else {
-      setShowSkipIntro(false);
-    }
-  }, [currentTime]);
-
-  // Skip Intro function
-  const skipIntro = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 85; // Skip to 1:25
-      setShowSkipIntro(false);
-    }
-  };
-
   // Handle Video End - Auto Next Episode
   const handleVideoEnd = async () => {
-    // Mark as completed in database
-    if (id && currentEpisode && userId) {
-      try {
-        await apiFetch(`${BACKEND_URL}/api/watch-progress/${id}/${currentEpisode}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentTime: duration,
-            duration,
-            completed: true
-          })
-        });
-      } catch (err) {
-        logger.warn('[Watch] Failed to mark as completed');
-      }
-    }
-
     if (autoNextEnabled && currentEpisode < totalEpisodes) {
       logger.log('[Watch] Auto-playing next episode');
       goToEpisode(currentEpisode + 1);
-    } else if (isLooping) {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play();
-      }
-    }
-  };
-
-  // Screenshot function
-  const takeScreenshot = () => {
-    if (!videoRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Download the screenshot
-      const link = document.createElement('a');
-      link.download = `${anime?.title || 'anime'}_ep${currentEpisode}_${formatTime(currentTime).replace(':', '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
     }
   };
 
@@ -737,350 +413,43 @@ export default function Watch() {
           <div className={`grid gap-4 ${isTheaterMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-4'}`}>
             {/* Video Player - 3 columns (or full width in theater mode) */}
             <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-3'} ${showNobar ? 'hidden' : ''}`}>
-              <div className="relative bg-black rounded-xl overflow-hidden">
-                {/* Back Button */}
-                <Link
-                  to={getAnimeUrl(anime!)}
-                  className="absolute top-4 left-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-lg text-white/70 hover:text-white transition-colors text-sm"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Kembali
-                </Link>
-
-                {/* Video Container */}
-                <div
-                  ref={videoContainerRef}
-                  className="relative aspect-video bg-black overflow-hidden flex items-center justify-center"
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={() => isPlaying && setShowControls(false)}
-                  onDoubleClick={handleDoubleClick}
-                  style={{ filter: `brightness(${brightness}%)` }}
-                >
-
-                  {/* Video Render */}
-                  {videoUrl && (videoUrl.startsWith('http') || videoUrl.startsWith('//')) ? (
-                    isEmbed ? (
-                      <iframe
-                        src={videoUrl}
-                        className="w-full h-full border-0"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      />
-                    ) : (
-                      <video
-                        ref={videoRef}
-                        className="w-full h-full object-contain cursor-pointer"
-                        onClick={togglePlay}
-                        onTimeUpdate={handleTimeUpdate}
-                        onLoadedMetadata={handleLoadedMetadata}
-                        onProgress={handleProgress}
-                        onEnded={handleVideoEnd}
-                        onCanPlay={() => { }}
-                        onError={(e) => {
-                          const video = e.target as HTMLVideoElement;
-                          logger.error('[Watch] Video Error:', video.error?.message, video.error?.code);
-                          setVideoError(`Video tidak dapat diputar: ${video.error?.message || 'Unknown error'}`);
-                        }}
-                        poster={anime.banner || anime.poster}
-                        key={videoUrl}
-                        src={videoUrl}
-                        autoPlay={isPlaying}
-                        playsInline
-                        // @ts-ignore - webkit attribute for iOS Safari
-                        webkit-playsinline="true"
-                        x-webkit-airplay="allow"
-                        loop={isLooping}
-                        crossOrigin="anonymous"
-                      >
-                        {subtitleUrl && (
-                          <track
-                            kind="subtitles"
-                            label="Subtitle"
-                            srcLang="id"
-                            src={subtitleUrl}
-                            default
-                          />
-                        )}
-                        Your browser does not support the video tag.
-                      </video>
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center gap-4">
-                      {!videoError && !isLoadingVideo && (
-                        <div className="w-12 h-12 border-4 border-[#6C5DD3] border-t-transparent rounded-full animate-spin" />
-                      )}
-                      <p className="text-white/40 text-sm">
-                        {videoError ? videoError : "Menyiapkan aliran video..."}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Loading Overlay */}
-                  {isLoadingVideo && videoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20">
-                      <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-
-                  {/* Big Play Button */}
-                  {!isPlaying && !isLoadingVideo && videoUrl && !isEmbed && (
-                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                      <button
-                        onClick={togglePlay}
-                        className="w-16 h-16 rounded-full bg-[#6C5DD3]/90 flex items-center justify-center hover:scale-110 transition-transform pointer-events-auto"
-                      >
-                        <Play className="w-8 h-8 text-white fill-current ml-1" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Controls Overlay */}
-                  {!isEmbed && (
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300 pointer-events-none ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
-                    >
-                      <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between pointer-events-auto">
-                        <div className="flex items-center gap-3">
-                          <span className="text-white font-medium text-sm">{anime.title}</span>
-                          <span className="text-white/50 text-sm">EP {currentEpisode}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setShowNobar(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#6C5DD3]/80 hover:bg-[#6C5DD3] text-white rounded-lg text-sm transition-colors"
-                          >
-                            <Users className="w-4 h-4" />
-                            <span className="hidden sm:inline">Nobar</span>
-                          </button>
-                          <button className="p-2 text-white/70 hover:text-white transition-colors">
-                            <Flag className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-white/70 hover:text-white transition-colors">
-                            <Share2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
-                        {/* Skip Intro Button */}
-                        {showSkipIntro && (
-                          <button
-                            onClick={skipIntro}
-                            className="absolute -top-12 right-4 flex items-center gap-2 px-4 py-2 bg-white/90 text-black font-medium rounded-lg hover:bg-white transition-all animate-pulse"
-                          >
-                            <FastForward className="w-4 h-4" />
-                            Skip Intro
-                          </button>
-                        )}
-
-                        {/* Progress Bar with Buffer */}
-                        <div className="mb-3 relative h-1.5 group">
-                          {/* Buffer Progress (background) */}
-                          <div
-                            className="absolute top-0 left-0 h-full bg-white/30 rounded-full transition-all"
-                            style={{ width: `${buffered}%` }}
-                          />
-                          {/* Current Progress (foreground) */}
-                          <input
-                            type="range"
-                            min={0}
-                            max={duration || 100}
-                            value={currentTime}
-                            onChange={handleSeek}
-                            className="absolute top-0 left-0 w-full h-full bg-transparent rounded-full appearance-none cursor-pointer [&::-webkit-slider-runnable-track]:bg-white/20 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#6C5DD3] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:mt-[-3px] group-hover:[&::-webkit-slider-thumb]:scale-125"
-                            style={{
-                              background: `linear-gradient(to right, #6C5DD3 0%, #6C5DD3 ${(currentTime / (duration || 100)) * 100}%, transparent ${(currentTime / (duration || 100)) * 100}%)`
-                            }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <button onClick={togglePlay} className="text-white hover:text-[#6C5DD3] transition-colors p-1">
-                              {isPlaying ? <Pause className="w-5 h-5 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-5 h-5 sm:w-5 sm:h-5 fill-current" />}
-                            </button>
-                            <button onClick={() => goToEpisode(currentEpisode - 1)} disabled={currentEpisode <= 1} className="text-white hover:text-[#6C5DD3] transition-colors disabled:opacity-30 p-1">
-                              <SkipBack className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => goToEpisode(currentEpisode + 1)} disabled={currentEpisode >= totalEpisodes} className="text-white hover:text-[#6C5DD3] transition-colors disabled:opacity-30 p-1">
-                              <SkipForward className="w-4 h-4" />
-                            </button>
-
-                            {/* Volume - hidden on mobile */}
-                            <div className="hidden sm:flex items-center gap-2">
-                              <button onClick={toggleMute} className="text-white hover:text-[#6C5DD3] transition-colors">
-                                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                              </button>
-                              <input type="range" min={0} max={1} step={0.1} value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-16 h-1 bg-white/20 rounded-full cursor-pointer" />
-                            </div>
-                            <span className="text-white text-[10px] sm:text-xs whitespace-nowrap">{formatTime(currentTime)} / {formatTime(duration)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 sm:gap-2">
-                            {/* Playback Speed - always visible */}
-                            <button
-                              onClick={changePlaybackSpeed}
-                              className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs font-medium text-white bg-white/10 hover:bg-white/20 rounded transition-colors"
-                              title="Playback Speed (S)"
-                            >
-                              {playbackSpeed}x
-                            </button>
-
-                            {/* Brightness Control - hidden on mobile */}
-                            <div className="relative group hidden sm:block">
-                              <button className="p-1.5 text-white hover:text-[#6C5DD3] transition-colors" title="Brightness">
-                                <Sun className="w-4 h-4" />
-                              </button>
-                              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex items-center gap-2 bg-black/90 px-3 py-2 rounded-lg">
-                                <span className="text-xs text-white/70">Brightness</span>
-                                <input
-                                  type="range"
-                                  min={50}
-                                  max={150}
-                                  value={brightness}
-                                  onChange={(e) => setBrightness(parseInt(e.target.value))}
-                                  className="w-20 h-1 bg-white/20 rounded-full cursor-pointer"
-                                />
-                                <span className="text-xs text-white w-8">{brightness}%</span>
-                              </div>
-                            </div>
-
-                            {/* Picture-in-Picture - hidden on mobile */}
-                            <button
-                              onClick={togglePiP}
-                              className="hidden sm:block p-1.5 text-white hover:text-[#6C5DD3] transition-colors"
-                              title="Picture in Picture (P)"
-                            >
-                              <PictureInPicture2 className="w-4 h-4" />
-                            </button>
-
-                            {/* Screenshot - hidden on mobile */}
-                            <button
-                              onClick={takeScreenshot}
-                              className="hidden sm:block p-1.5 text-white hover:text-[#6C5DD3] transition-colors"
-                              title="Screenshot"
-                            >
-                              <Camera className="w-4 h-4" />
-                            </button>
-
-                            {/* Loop Toggle - hidden on mobile */}
-                            <button
-                              onClick={() => setIsLooping(!isLooping)}
-                              className={`hidden sm:block p-1.5 transition-colors ${isLooping ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                              title="Loop Video"
-                            >
-                              <Repeat className="w-4 h-4" />
-                            </button>
-
-                            {/* Auto Next Toggle - hidden on mobile */}
-                            <button
-                              onClick={() => setAutoNextEnabled(!autoNextEnabled)}
-                              className={`hidden sm:flex p-1.5 transition-colors items-center gap-1 ${autoNextEnabled ? 'text-green-400' : 'text-white/50'}`}
-                              title={autoNextEnabled ? 'Auto Next: ON' : 'Auto Next: OFF'}
-                            >
-                              <SkipForward className="w-4 h-4" />
-                              <span className="text-[10px] font-medium">{autoNextEnabled ? 'ON' : 'OFF'}</span>
-                            </button>
-
-                            {/* Quality Selector - only for direct streams with multiple qualities */}
-                            {availableQualities.length > 0 && !isEmbed && (
-                              <div className="relative hidden sm:block">
-                                <button
-                                  onClick={() => setShowQualityMenu(!showQualityMenu)}
-                                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${showQualityMenu ? 'bg-[#6C5DD3] text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                                  title="Video Quality"
-                                >
-                                  <Film className="w-3.5 h-3.5" />
-                                  <span>{selectedQuality || 'Auto'}</span>
-                                </button>
-
-                                {showQualityMenu && (
-                                  <div className="absolute bottom-full right-0 mb-2 bg-[#1A1A2E] border border-white/10 rounded-lg shadow-xl overflow-hidden min-w-[100px]">
-                                    {availableQualities.map((quality) => (
-                                      <button
-                                        key={quality}
-                                        onClick={async () => {
-                                          // Find stream with this quality
-                                          const stream = allDirectStreams.find(s => s.quality === quality);
-                                          if (stream) {
-                                            setSelectedQuality(quality);
-                                            // Generate proxy for this quality
-                                            const signedUrl = await getSignedVideoUrl(stream.url, id, currentEpisode);
-                                            setVideoUrl(signedUrl);
-                                          }
-                                          setShowQualityMenu(false);
-                                        }}
-                                        className={`w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-colors ${selectedQuality === quality ? 'text-[#6C5DD3] bg-white/5' : 'text-white'
-                                          }`}
-                                      >
-                                        {quality}
-                                        {selectedQuality === quality && ' ✓'}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Theater Mode - hidden on mobile */}
-                            <button
-                              onClick={() => setIsTheaterMode(!isTheaterMode)}
-                              className={`hidden lg:block p-1.5 transition-colors ${isTheaterMode ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                              title="Theater Mode (T)"
-                            >
-                              <Monitor className="w-4 h-4" />
-                            </button>
-
-                            {/* Settings Menu - hidden on mobile */}
-                            <div className="relative hidden sm:block">
-                              <button
-                                onClick={() => setShowSettings(!showSettings)}
-                                className={`p-1.5 transition-colors ${showSettings ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                                title="Settings"
-                              >
-                                <Settings className="w-4 h-4" />
-                              </button>
-                              {showSettings && (
-                                <div className="absolute bottom-full right-0 mb-2 bg-black/95 rounded-xl p-4 min-w-[200px] text-sm z-50">
-                                  <div className="flex items-center gap-2 mb-3 text-white font-medium">
-                                    <Keyboard className="w-4 h-4" />
-                                    Keyboard Shortcuts
-                                  </div>
-                                  <div className="space-y-1.5 text-xs text-white/70">
-                                    <div className="flex justify-between"><span>Play/Pause</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">Space / K</kbd></div>
-                                    <div className="flex justify-between"><span>Seek -10s</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">← / J</kbd></div>
-                                    <div className="flex justify-between"><span>Seek +10s</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">→ / L</kbd></div>
-                                    <div className="flex justify-between"><span>Volume Up</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">↑</kbd></div>
-                                    <div className="flex justify-between"><span>Volume Down</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">↓</kbd></div>
-                                    <div className="flex justify-between"><span>Mute</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">M</kbd></div>
-                                    <div className="flex justify-between"><span>Fullscreen</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">F</kbd></div>
-                                    <div className="flex justify-between"><span>Theater Mode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">T</kbd></div>
-                                    <div className="flex justify-between"><span>PiP</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">P</kbd></div>
-                                    <div className="flex justify-between"><span>Speed</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">S</kbd></div>
-                                    <div className="flex justify-between"><span>Next Episode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">N</kbd></div>
-                                    <div className="flex justify-between"><span>Prev Episode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">B</kbd></div>
-                                  </div>
-                                  <div className="mt-3 pt-3 border-t border-white/10 text-xs text-white/50">
-                                    Double-click left/right to skip ±10s
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Fullscreen - always visible */}
-                            <button
-                              onClick={toggleFullscreen}
-                              className="p-1.5 text-white hover:text-[#6C5DD3] transition-colors"
-                              title="Fullscreen (F)"
-                            >
-                              <Maximize className="w-4 h-4 sm:w-4 sm:h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <VideoPlayer
+                videoUrl={videoUrl}
+                poster={anime.banner || anime.poster}
+                title={anime.title}
+                episode={currentEpisode}
+                animeId={anime.id}
+                isEmbed={isEmbed}
+                subtitleUrl={subtitleUrl}
+                autoPlay={false}
+                onBack={() => navigate(getAnimeUrl(anime))}
+                onNobar={() => setShowNobar(true)}
+                onShare={() => {/* TODO: Implement share */}}
+                onReport={() => {/* TODO: Implement report */}}
+                onEnded={handleVideoEnd}
+                onTimeUpdate={(time, duration) => {
+                  setCurrentTime(time);
+                  setDuration(duration);
+                  durationRef.current = duration;
+                }}
+                availableQualities={availableQualities}
+                selectedQuality={selectedQuality}
+                onQualityChange={(quality) => {
+                  logger.log('[Watch] Quality changed to:', quality);
+                  setSelectedQuality(quality);
+                }}
+                onSaveProgress={(time) => {
+                  // Progress juga disimpan ke backend via updateWatchProgress
+                  const currentDuration = durationRef.current;
+                  if (id && currentDuration > 0) {
+                    const progress = (time / currentDuration) * 100;
+                    updateWatchProgress(id, `ep-${currentEpisode}`, currentEpisode, progress);
+                  }
+                }}
+                chapters={chapters}
+                introEndTime={introTime}
+                skipTimes={skipTimes}
+              />
             </div>
 
             {/* Episode List Sidebar - 1 column */}
@@ -1200,20 +569,6 @@ export default function Watch() {
 
 
             </div>
-
-            {downloadStreams.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-white text-sm font-medium mb-2">Download / Alternatif ({downloadStreams.length})</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {downloadStreams.map((stream, idx) => (
-                    <a key={idx} href={stream.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs">
-                      <span className="text-white/90">{stream.server} ({stream.quality})</span>
-                      <Share2 className="w-3 h-3 text-white/30" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Navigation with Up Next Preview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

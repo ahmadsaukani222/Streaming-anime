@@ -439,17 +439,24 @@ export default function DesktopHome({
                       key={anime.id}
                       to={getAnimeUrl(anime)}
                       onClick={() => setSearchQuery('')}
-                      className="flex items-center gap-3 p-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                      className="flex items-center gap-4 p-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
                     >
-                      <OptimizedImage
-                        src={anime.poster}
-                        alt={anime.title}
-                        aspectRatio="poster"
-                        containerClassName="w-8 h-11 flex-shrink-0 rounded overflow-hidden"
-                      />
+                      <div 
+                        className="w-14 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[#1A1A2E] border border-white/10"
+                      >
+                        <img
+                          src={anime.poster}
+                          alt={anime.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm line-clamp-1">{anime.title}</p>
-                        <span className="text-white/40 text-xs">{anime.status}</span>
+                        <p className="text-white font-medium line-clamp-1">{anime.title}</p>
+                        <span className="text-white/50 text-sm">{anime.status}</span>
                       </div>
                     </Link>
                   ))}

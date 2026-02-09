@@ -290,14 +290,42 @@ router.post('/confirm', validateBody([
                             // Gunakan anime.id sebagai animeId untuk thumbnail
                             const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, anime.id, episodeNum);
                             if (thumbnailUrl) {
-                                // Update episode data with thumbnail
-                                anime.episodeData[epIndex].thumbnail = thumbnailUrl;
-                                anime.markModified('episodeData');
-                                await anime.save();
-                                console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                                // Fetch fresh anime data to avoid version conflict
+                                const freshAnime = await CustomAnime.findOne({ id: animeId });
+                                if (freshAnime && freshAnime.episodeData) {
+                                    const freshEpIndex = freshAnime.episodeData.findIndex(e => e.ep === episodeNum);
+                                    if (freshEpIndex !== -1) {
+                                        freshAnime.episodeData[freshEpIndex].thumbnail = thumbnailUrl;
+                                        freshAnime.markModified('episodeData');
+                                        await freshAnime.save();
+                                        console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                                    }
+                                }
                             }
                         } catch (thumbErr) {
                             console.error('[Upload] Thumbnail generation error:', thumbErr.message);
+                            // Retry once after delay if it's a version error
+                            if (thumbErr.message?.includes('version')) {
+                                setTimeout(async () => {
+                                    try {
+                                        const retryAnime = await CustomAnime.findOne({ id: animeId });
+                                        if (retryAnime && retryAnime.episodeData) {
+                                            const retryEpIndex = retryAnime.episodeData.findIndex(e => e.ep === episodeNum);
+                                            if (retryEpIndex !== -1 && !retryAnime.episodeData[retryEpIndex].thumbnail) {
+                                                const retryUrl = await generateAndUploadThumbnail(publicUrl, anime.id, episodeNum);
+                                                if (retryUrl) {
+                                                    retryAnime.episodeData[retryEpIndex].thumbnail = retryUrl;
+                                                    retryAnime.markModified('episodeData');
+                                                    await retryAnime.save();
+                                                    console.log(`[Upload] Retry success: Updated episode ${episodeNum} with thumbnail`);
+                                                }
+                                            }
+                                        }
+                                    } catch (retryErr) {
+                                        console.error('[Upload] Retry failed:', retryErr.message);
+                                    }
+                                }, 2000);
+                            }
                         }
                     })();
 
@@ -473,17 +501,42 @@ router.post('/video', upload.single('video'), async (req, res) => {
                             // Gunakan anime.id sebagai animeId untuk thumbnail
                             const thumbnailUrl = await generateAndUploadThumbnail(result.url, anime.id, episodeNum);
                             if (thumbnailUrl) {
-                                // Update episode data with thumbnail
-                                const epIdx = anime.episodeData.findIndex(e => e.ep === episodeNum);
-                                if (epIdx !== -1) {
-                                    anime.episodeData[epIdx].thumbnail = thumbnailUrl;
-                                    anime.markModified('episodeData');
-                                    await anime.save();
-                                    console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                                // Fetch fresh anime data to avoid version conflict
+                                const freshAnime = await CustomAnime.findOne({ id: animeId });
+                                if (freshAnime && freshAnime.episodeData) {
+                                    const epIdx = freshAnime.episodeData.findIndex(e => e.ep === episodeNum);
+                                    if (epIdx !== -1) {
+                                        freshAnime.episodeData[epIdx].thumbnail = thumbnailUrl;
+                                        freshAnime.markModified('episodeData');
+                                        await freshAnime.save();
+                                        console.log(`[Upload] Updated episode ${episodeNum} with thumbnail: ${thumbnailUrl}`);
+                                    }
                                 }
                             }
                         } catch (thumbErr) {
                             console.error('[Upload] Thumbnail generation error:', thumbErr.message);
+                            // Retry once after delay if it's a version error
+                            if (thumbErr.message?.includes('version')) {
+                                setTimeout(async () => {
+                                    try {
+                                        const retryAnime = await CustomAnime.findOne({ id: animeId });
+                                        if (retryAnime && retryAnime.episodeData) {
+                                            const retryEpIndex = retryAnime.episodeData.findIndex(e => e.ep === episodeNum);
+                                            if (retryEpIndex !== -1 && !retryAnime.episodeData[retryEpIndex].thumbnail) {
+                                                const retryUrl = await generateAndUploadThumbnail(result.url, anime.id, episodeNum);
+                                                if (retryUrl) {
+                                                    retryAnime.episodeData[retryEpIndex].thumbnail = retryUrl;
+                                                    retryAnime.markModified('episodeData');
+                                                    await retryAnime.save();
+                                                    console.log(`[Upload] Retry success: Updated episode ${episodeNum} with thumbnail`);
+                                                }
+                                            }
+                                        }
+                                    } catch (retryErr) {
+                                        console.error('[Upload] Retry failed:', retryErr.message);
+                                    }
+                                }, 2000);
+                            }
                         }
                     })();
                 }
