@@ -14,63 +14,32 @@ const Notification = require('../models/Notification');
 const ScheduleSubscription = require('../models/ScheduleSubscription');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
-const { generateThumbnailWithRetry } = require('../utils/thumbnail-generator');
+const { generateThumbnail: generateVideoThumbnail } = require('../utils/videoThumbnail');
 
 router.use(requireAuth);
 router.use(requireAdmin);
 
 /**
- * Generate thumbnail key for episode
- * @param {string} animeTitle - Anime title
- * @param {number} episode - Episode number
- * @returns {string}
- */
-function generateThumbnailKey(animeTitle, episode) {
-    const slug = animeTitle
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-    return `thumbnails/${slug}/ep-${episode}.jpg`;
-}
-
-/**
  * Generate and upload thumbnail for episode
+ * Menggunakan videoThumbnail.js yang sama dengan "Generate All Thumbnails"
  * @param {string} videoUrl - Public URL of the video
- * @param {string} animeTitle - Anime title
+ * @param {string} animeId - Anime ID
  * @param {number} episode - Episode number
  * @returns {Promise<string|null>} - Thumbnail URL or null if failed
  */
-async function generateAndUploadThumbnail(videoUrl, animeTitle, episode) {
+async function generateAndUploadThumbnail(videoUrl, animeId, episode) {
     try {
-        console.log(`[Thumbnail] Starting generation for ${animeTitle} Episode ${episode}`);
+        console.log(`[Thumbnail] Starting generation for anime ${animeId} Episode ${episode}`);
         
-        // Generate thumbnail from video
-        const thumbnailBuffer = await generateThumbnailWithRetry(videoUrl, {
-            time: 5,      // Capture at 5 seconds
-            width: 1280,  // HD resolution
-            height: 720
-        }, 3);
+        // Gunakan videoThumbnail.js yang sama dengan endpoint "Generate All"
+        // Timestamp random antara 3-10 menit (sama dengan generate all)
+        const thumbnailUrl = await generateVideoThumbnail(videoUrl, animeId, episode);
         
-        // Generate key for thumbnail
-        const thumbnailKey = generateThumbnailKey(animeTitle, episode);
-        
-        // Upload thumbnail to R2 (frontend bucket for CDN)
-        const uploadResult = await r2.uploadFile(
-            thumbnailBuffer,
-            thumbnailKey,
-            'image/jpeg',
-            'frontend'  // Use frontend bucket for thumbnails
-        );
-        
-        if (!uploadResult.success) {
-            throw new Error(`Failed to upload thumbnail: ${uploadResult.error}`);
-        }
-        
-        console.log(`[Thumbnail] Generated and uploaded: ${uploadResult.url}`);
-        return uploadResult.url;
+        console.log(`[Thumbnail] Generated and uploaded: ${thumbnailUrl}`);
+        return thumbnailUrl;
         
     } catch (err) {
-        console.error(`[Thumbnail] Error generating thumbnail for ${animeTitle} Ep ${episode}:`, err.message);
+        console.error(`[Thumbnail] Error generating thumbnail for ${animeId} Ep ${episode}:`, err.message);
         // Return null so upload can continue even if thumbnail fails
         return null;
     }
@@ -318,7 +287,8 @@ router.post('/confirm', validateBody([
                     // Auto-generate thumbnail for the episode (async, don't block response)
                     (async () => {
                         try {
-                            const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, animeTitle, episodeNum);
+                            // Gunakan anime.id sebagai animeId untuk thumbnail
+                            const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, anime.id, episodeNum);
                             if (thumbnailUrl) {
                                 // Update episode data with thumbnail
                                 anime.episodeData[epIndex].thumbnail = thumbnailUrl;
@@ -500,7 +470,8 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     // Auto-generate thumbnail for the episode (async, don't block response)
                     (async () => {
                         try {
-                            const thumbnailUrl = await generateAndUploadThumbnail(result.url, animeTitle, episodeNum);
+                            // Gunakan anime.id sebagai animeId untuk thumbnail
+                            const thumbnailUrl = await generateAndUploadThumbnail(result.url, anime.id, episodeNum);
                             if (thumbnailUrl) {
                                 // Update episode data with thumbnail
                                 const epIdx = anime.episodeData.findIndex(e => e.ep === episodeNum);
@@ -636,7 +607,7 @@ router.post('/regenerate-thumbnail', validateBody([
         }
 
         // Generate thumbnail
-        const thumbnailUrl = await generateAndUploadThumbnail(videoUrl, anime.title, episodeNum);
+        const thumbnailUrl = await generateAndUploadThumbnail(videoUrl, anime.id, episodeNum);
 
         if (!thumbnailUrl) {
             return res.status(500).json({ error: 'Failed to generate thumbnail' });
