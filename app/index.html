@@ -26,17 +26,18 @@
   <!-- Web App Manifest -->
   <link rel="manifest" href="/manifest.json?v=2">
 
-  <!-- Performance: Preconnect to critical origins (DNS early) -->
+  <!-- Performance: Preconnect to critical origins only (max 4 recommended) -->
+  <!-- 1. API - Required for initial data fetch -->
   <link rel="preconnect" href="https://api.animeku.xyz" crossorigin />
-  <link rel="dns-prefetch" href="https://api.animeku.xyz" />
 
-  <!-- Preconnect to image CDN for faster LCP -->
-  <link rel="preconnect" href="https://cdn.myanimelist.net" crossorigin />
-  <link rel="dns-prefetch" href="https://cdn.myanimelist.net" />
-
-  <!-- Font optimization - Preconnect to Google Fonts -->
+  <!-- 2-3. Google Fonts - Required for text rendering -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- DNS prefetch for secondary origins (lighter than preconnect) -->
+  <link rel="dns-prefetch" href="https://cdn.myanimelist.net" />
+
+  <!-- Font loading with display swap -->
   <link rel="preload" as="style"
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet"
@@ -45,9 +46,6 @@
 
   <!-- Preload LCP image (hero) - critical for performance -->
   <link rel="preload" as="image" href="/images/hero/hero-jujutsu.webp" type="image/webp" fetchpriority="high" />
-
-  <!-- Preconnect to API for faster data fetching -->
-  <link rel="preconnect" href="https://45.130.164.161" crossorigin />
 
   <meta property="og:title" content="Nonton Anime Subtitle Indonesia HD Gratis Terbaru - Animeku" />
   <meta property="og:description"
