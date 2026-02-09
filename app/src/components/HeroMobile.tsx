@@ -163,6 +163,8 @@ export default function HeroMobile() {
             key={s.id}
             src={s.poster}
             alt={s.title}
+            width={640}
+            height={960}
             className={`hero-image absolute inset-0 transition-opacity duration-500 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
               }`}
             loading={index === 0 ? 'eager' : 'lazy'}
