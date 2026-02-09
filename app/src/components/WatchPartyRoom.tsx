@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Users, 
-  Send, 
-  Crown, 
-  LogOut, 
+import {
+  Users,
+  Send,
+  Crown,
+  LogOut,
   CheckCircle2,
   Copy,
   MessageSquare,
@@ -61,10 +61,12 @@ export default function WatchPartyRoom({
 
   const [messageInput, setMessageInput] = useState('');
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showMobilePanel, setShowMobilePanel] = useState(false); // Mobile bottom sheet visibility
+  const [mobileActiveTab, setMobileActiveTab] = useState<'chat' | 'participants'>('chat'); // Mobile tab
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [hasJoined, setHasJoined] = useState(false);
   const [roomIdToJoin, setRoomIdToJoin] = useState<string | undefined>(roomId);
-  const [floatingReactions, setFloatingReactions] = useState<{name: string; emoji: string; id: number}[]>([]);
+  const [floatingReactions, setFloatingReactions] = useState<{ name: string; emoji: string; id: number }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // const wasPlayingRef = useRef(false);
 
@@ -80,7 +82,7 @@ export default function WatchPartyRoom({
         setFloatingReactions(prev => prev.filter(r => r.id !== reaction.id));
       }, 4000);
     };
-    
+
     window.addEventListener('watchparty-reaction', handleReaction as EventListener);
     return () => window.removeEventListener('watchparty-reaction', handleReaction as EventListener);
   }, []);
@@ -179,7 +181,7 @@ export default function WatchPartyRoom({
 
   const readyCount = participants.filter(p => p.isReady).length;
   const totalCount = participants.length;
-  
+
 
 
   if (error) {
@@ -206,7 +208,7 @@ export default function WatchPartyRoom({
         <div className="bg-[#1A1A2E] rounded-2xl p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold text-white mb-2 text-center">Nobar</h2>
           <p className="text-white/60 text-center mb-6">Buat room atau join room yang ada</p>
-          
+
           <div className="space-y-4">
             {/* Join Room Section */}
             <div className="space-y-3">
@@ -231,7 +233,7 @@ export default function WatchPartyRoom({
                 Gabung Room
               </Button>
             </div>
-            
+
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/10"></div>
@@ -240,7 +242,7 @@ export default function WatchPartyRoom({
                 <span className="px-2 bg-[#1A1A2E] text-white/40">or</span>
               </div>
             </div>
-            
+
             {/* Create Room Section */}
             <Button
               onClick={() => {
@@ -251,7 +253,7 @@ export default function WatchPartyRoom({
             >
               Buat Room Baru
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={onClose}
@@ -315,11 +317,10 @@ export default function WatchPartyRoom({
             {/* Ready Status */}
             <button
               onClick={toggleReady}
-              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors ${
-                participants.find(p => p.userId === currentUserId)?.isReady
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors ${participants.find(p => p.userId === currentUserId)?.isReady
+                ? 'bg-green-500/20 text-green-400'
+                : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
             >
               <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-xs sm:text-sm">{readyCount}/{totalCount}</span>
@@ -328,9 +329,26 @@ export default function WatchPartyRoom({
               )}
             </button>
 
-            {/* Participants Toggle */}
+            {/* Chat Toggle - Mobile Only */}
             <button
-              onClick={() => setShowParticipants(!showParticipants)}
+              onClick={() => {
+                setMobileActiveTab('chat');
+                setShowMobilePanel(true);
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors lg:hidden"
+            >
+              <MessageSquare className="w-4 h-4 text-white/60" />
+              {messages.length > 0 && (
+                <span className="text-white text-xs bg-[#6C5DD3] px-1.5 rounded-full">{messages.length}</span>
+              )}
+            </button>
+
+            {/* Participants Toggle - Mobile Only */}
+            <button
+              onClick={() => {
+                setMobileActiveTab('participants');
+                setShowMobilePanel(true);
+              }}
               className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors lg:hidden"
             >
               <Users className="w-4 h-4 text-white/60" />
@@ -384,41 +402,41 @@ export default function WatchPartyRoom({
             ))}
           </div>
           <WatchPartyVideoPlayer
-          animeId={animeId}
-          animeTitle={animeTitle}
-          episodeNumber={episodeNumber}
-          videoRef={videoRef}
-          isHost={isHost}
-          isPlaying={videoState?.isPlaying}
-          currentTime={videoState?.currentTime}
-          onPlay={() => {
-            if (videoRef.current && isHost) {
-              sendVideoState(true, videoRef.current.currentTime);
-            }
-          }}
-          onPause={() => {
-            if (videoRef.current && isHost) {
-              sendVideoState(false, videoRef.current.currentTime);
-            }
-          }}
-          onSeek={(time) => {
-            if (isHost) {
-              seekVideo(time);
-            }
-          }}
-        />
+            animeId={animeId}
+            animeTitle={animeTitle}
+            episodeNumber={episodeNumber}
+            videoRef={videoRef}
+            isHost={isHost}
+            isPlaying={videoState?.isPlaying}
+            currentTime={videoState?.currentTime}
+            onPlay={() => {
+              if (videoRef.current && isHost) {
+                sendVideoState(true, videoRef.current.currentTime);
+              }
+            }}
+            onPause={() => {
+              if (videoRef.current && isHost) {
+                sendVideoState(false, videoRef.current.currentTime);
+              }
+            }}
+            onSeek={(time) => {
+              if (isHost) {
+                seekVideo(time);
+              }
+            }}
+          />
         </div>
       </div>
 
       {/* Sidebar - Chat & Participants */}
       <AnimatePresence>
         {/* Mobile Backdrop */}
-        {showParticipants && (
+        {showMobilePanel && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowParticipants(false)}
+            onClick={() => setShowMobilePanel(false)}
             className="lg:hidden fixed inset-0 bg-black/60 z-40"
           />
         )}
@@ -428,21 +446,21 @@ export default function WatchPartyRoom({
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
-          className={`${showParticipants ? 'flex' : 'hidden'} lg:hidden fixed inset-x-0 bottom-0 h-[70vh] bg-[#1A1A2E] border-t border-white/10 flex-col rounded-t-2xl z-50`}
+          className={`${showMobilePanel ? 'flex' : 'hidden'} lg:hidden fixed inset-x-0 bottom-0 h-[70vh] bg-[#1A1A2E] border-t border-white/10 flex-col rounded-t-2xl z-50`}
         >
           {/* Drag Handle */}
-          <div 
+          <div
             className="w-full flex justify-center pt-3 pb-2 cursor-pointer"
-            onClick={() => setShowParticipants(false)}
+            onClick={() => setShowMobilePanel(false)}
           >
             <div className="w-12 h-1.5 bg-white/20 rounded-full" />
           </div>
-          
+
           {/* Tabs */}
           <div className="flex border-b border-white/10">
             <button
-              onClick={() => setShowParticipants(false)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${!showParticipants ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
+              onClick={() => setMobileActiveTab('chat')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${mobileActiveTab === 'chat' ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
             >
               <div className="flex items-center justify-center gap-2">
                 <MessageSquare className="w-4 h-4" />
@@ -450,8 +468,8 @@ export default function WatchPartyRoom({
               </div>
             </button>
             <button
-              onClick={() => setShowParticipants(true)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${showParticipants ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
+              onClick={() => setMobileActiveTab('participants')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${mobileActiveTab === 'participants' ? 'text-[#6C5DD3] border-b-2 border-[#6C5DD3]' : 'text-white/60 hover:text-white'}`}
             >
               <div className="flex items-center justify-center gap-2">
                 <Users className="w-4 h-4" />
@@ -463,7 +481,7 @@ export default function WatchPartyRoom({
           {/* Content */}
           <div className="flex-1 overflow-hidden">
 
-            {showParticipants ? (
+            {mobileActiveTab === 'participants' ? (
               <div className="p-4 space-y-3">
 
                 {participants.map((participant) => (
@@ -524,16 +542,14 @@ export default function WatchPartyRoom({
                       {msg.userId !== 'system' && (
                         <span className="text-xs text-white/40 mb-1">{msg.name}</span>
                       )}
-                      <div className={`rounded-lg px-3 py-2 max-w-[90%] ${
-                        msg.userId === 'system' 
-                          ? 'bg-transparent' 
-                          : 'bg-white/10'
-                      }`}>
-                        <p className={`text-sm ${
-                          msg.userId === 'system' 
-                            ? 'text-2xl' 
-                            : 'text-white'
-                        }`}>{msg.message}</p>
+                      <div className={`rounded-lg px-3 py-2 max-w-[90%] ${msg.userId === 'system'
+                        ? 'bg-transparent'
+                        : 'bg-white/10'
+                        }`}>
+                        <p className={`text-sm ${msg.userId === 'system'
+                          ? 'text-2xl'
+                          : 'text-white'
+                          }`}>{msg.message}</p>
                       </div>
                     </div>
                   ))}

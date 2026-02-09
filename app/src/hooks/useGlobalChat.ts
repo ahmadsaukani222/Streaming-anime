@@ -49,10 +49,10 @@ export function useGlobalChat(): UseGlobalChatReturn {
   // Initialize socket connection
   useEffect(() => {
     const token = getAuthToken();
-    
+
     // Build auth object
     const auth: { token?: string; username?: string; userId?: string; avatar?: string; communityRole?: string } = {};
-    
+
     if (token && user) {
       // Logged in user - include token
       auth.token = token;
@@ -207,7 +207,7 @@ export function useGlobalChat(): UseGlobalChatReturn {
       console.log('[GlobalChat] Disconnecting socket...');
       socket.disconnect();
     };
-  }, [user?.id]); // Reconnect when user ID changes
+  }, [user?.id, user?.avatar, user?.name, user?.communityRole]); // Reconnect when user profile changes
 
   const sendMessage = useCallback((message: string) => {
     if (socketRef.current && isConnected && message.trim()) {
@@ -218,12 +218,12 @@ export function useGlobalChat(): UseGlobalChatReturn {
   const setTyping = useCallback((isTyping: boolean) => {
     if (socketRef.current && isConnected) {
       socketRef.current.emit('typing', isTyping);
-      
+
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       // Auto stop typing after 3 seconds
       if (isTyping) {
         typingTimeoutRef.current = setTimeout(() => {
@@ -236,8 +236,8 @@ export function useGlobalChat(): UseGlobalChatReturn {
   const loadMoreMessages = useCallback(() => {
     if (socketRef.current && isConnected && messages.length > 0) {
       const oldestMessage = messages[0];
-      socketRef.current.emit('load-more-messages', { 
-        before: oldestMessage.timestamp.toISOString() 
+      socketRef.current.emit('load-more-messages', {
+        before: oldestMessage.timestamp.toISOString()
       });
     }
   }, [isConnected, messages]);
