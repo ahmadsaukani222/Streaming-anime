@@ -78,6 +78,7 @@
 
   /* Reduced motion for mobile and users who prefer it */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -90,12 +91,13 @@
 
   /* Mobile optimizations */
   @media (max-width: 640px) {
+
     /* Disable complex animations on mobile */
     .animate-float,
     .animate-pulse-glow {
       animation: none !important;
     }
-    
+
     /* Faster transitions on mobile */
     * {
       transition-duration: 150ms !important;
@@ -108,6 +110,19 @@
   [class*="h-[75vh]"] {
     min-height: 420px;
     contain: layout style;
+    /* Gradient placeholder for LCP - shows before image loads */
+    background: linear-gradient(135deg, #1a1a2e 0%, #0F0F1A 50%, #16213e 100%);
+  }
+
+  /* Hero image optimization */
+  .hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    /* Smooth transition from placeholder */
+    opacity: 1;
+    transition: opacity 0.3s ease-out;
   }
 
   /* Prevent CLS for images by reserving aspect-ratio space */
@@ -315,6 +330,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -350,6 +366,7 @@
     opacity: 0;
     transform: translateX(100%);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -464,6 +481,7 @@
    Optimized for iPhone 14 Pro (390 x 844)
    ======================================== */
 @media (max-width: 399px) {
+
   /* Smaller buttons */
   .btn-primary {
     @apply px-4 py-2.5 text-sm;
@@ -510,7 +528,7 @@ video::cue {
   background-color: rgba(0, 0, 0, 0.75);
   padding: 4px 12px;
   border-radius: 4px;
-  text-shadow: 
+  text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.9),
     0 0 10px rgba(0, 0, 0, 0.6);
   line-height: 1.6;
@@ -536,6 +554,7 @@ video:-webkit-full-screen::cue {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
