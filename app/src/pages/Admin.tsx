@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/toast-simple';
 import { Link } from 'react-router-dom';
 import { StaticPageSEO } from '@/components/Seo';
 import {
@@ -64,26 +64,26 @@ import SafeAvatar from '@/components/SafeAvatar';
 
 
 export default function Admin() {
-  const { toast } = useToast();
+  const { addToast: toast } = useToast();
   const { user, logout, animeList, addAnime, updateAnime, deleteAnime } = useApp();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // Site Settings State
   const [siteName, setSiteName] = useState(() => localStorage.getItem('siteName') || DEFAULT_SITE_NAME);
   const [siteDescription, setSiteDescription] = useState(() => localStorage.getItem('siteDescription') || 'Platform streaming anime terbaik');
   const [siteEmail, setSiteEmail] = useState(() => localStorage.getItem('siteEmail') || 'support@animeku.xyz');
   const [siteLogo, setSiteLogo] = useState(() => localStorage.getItem('siteLogo') || '');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  
+
   // Logo Upload State
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState('');
-  
+
   // Handle logo file upload
   const handleLogoUpload = async (file: File) => {
     if (!file) return;
-    
+
     // Validate file
     if (!file.type.startsWith('image/')) {
       setLogoUploadError('File harus berupa gambar (PNG, JPG, GIF, WEBP)');
@@ -93,10 +93,10 @@ export default function Admin() {
       setLogoUploadError('Ukuran file maksimal 2MB');
       return;
     }
-    
+
     setLogoUploadError('');
     setIsUploadingLogo(true);
-    
+
     try {
       // Get presigned URL from backend (logo endpoint)
       const response = await apiFetch(`${BACKEND_URL}/api/upload/logo`, {
@@ -110,10 +110,10 @@ export default function Admin() {
           contentType: file.type
         })
       });
-      
+
       if (!response.ok) throw new Error('Failed to get upload URL');
       const { uploadUrl, publicUrl } = await response.json();
-      
+
       // Upload to R2
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
@@ -122,35 +122,35 @@ export default function Admin() {
           'Content-Type': file.type,
         },
       });
-      
+
       if (!uploadResponse.ok) throw new Error('Upload failed');
-      
+
       // Set the logo URL
       setSiteLogo(publicUrl);
-      
+
       // Save to localStorage immediately
       localStorage.setItem('siteLogo', publicUrl);
-      
+
       // Also save as favicon (use same image as favicon)
       localStorage.setItem('siteFavicon', publicUrl);
-      
+
       // Update favicon in document head (add timestamp to force refresh)
       const faviconLink = document.getElementById('site-favicon') as HTMLLinkElement;
       if (faviconLink) {
         const timestamp = Date.now();
         faviconLink.href = `${publicUrl}?v=${timestamp}`;
       }
-      
+
       // Broadcast to all tabs/components
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel('site-settings');
         bc.postMessage({ type: 'logoUpdated', logo: publicUrl });
         bc.close();
       }
-      
+
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new CustomEvent('siteLogoUpdated', { detail: publicUrl }));
-      
+
       toast({
         title: 'Berhasil!',
         description: 'Logo berhasil diupload',
@@ -1111,2344 +1111,1043 @@ export default function Admin() {
         canonical="/admin"
       />
       <div className="min-h-screen bg-[#0F0F1A] flex">
-      {/* Sidebar Overlay (Mobile) */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`w-64 bg-gradient-to-b from-[#1A1A2E] to-[#12121F] border-r border-white/5 fixed h-full z-40 transition-transform duration-300 overflow-hidden flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`} data-lenis-prevent>
-        <div className="flex-1 overflow-y-auto p-6 pb-2 admin-sidebar-scroll">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 mb-8 group">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg transition-shadow overflow-hidden ${siteLogo ? 'bg-transparent shadow-none' : 'bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] shadow-[#6C5DD3]/20 group-hover:shadow-[#6C5DD3]/40'}`}>
-              {siteLogo ? (
-                <img src={siteLogo} alt={siteName} className="w-full h-full object-contain" />
-              ) : (
-                <Film className="w-6 h-6 text-white" />
-              )}
-            </div>
-            <div>
-              <span className="text-lg font-bold font-heading text-white">{siteName}</span>
-              <span className="block text-xs text-white/40">Admin Panel</span>
-            </div>
-          </Link>
-
-          {/* Nav Section */}
-          <p className="text-xs text-white/30 uppercase tracking-wider mb-2 px-2">Menu</p>
-          <nav className="space-y-1">
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-              { id: 'anime', label: 'Kelola Anime', icon: Film },
-              { id: 'kelola-jadwal', label: 'Kelola Jadwal', icon: Calendar },
-              { id: 'add-anime', label: 'Tambah Anime', icon: Plus },
-              { id: 'episodes', label: 'Kelola Episode', icon: PlaySquare },
-              { id: 'generate-sub', label: 'Generate Subtitle', icon: Captions },
-              { id: 'hero', label: 'Kelola Hero', icon: ImageIcon },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === item.id
-                  ? 'bg-gradient-to-r from-[#6C5DD3] to-[#6C5DD3]/80 text-white shadow-md shadow-[#6C5DD3]/20'
-                  : 'text-white/60 hover:bg-white/5 hover:text-white'
-                  }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Settings Section */}
-          <p className="text-xs text-white/30 uppercase tracking-wider mb-2 px-2 mt-6">Lainnya</p>
-          <nav className="space-y-1">
-            {[
-              { id: 'users', label: 'Kelola User', icon: Users },
-              { id: 'badges', label: 'Kelola Badge', icon: Award },
-              { id: 'moderation', label: 'Moderasi', icon: Shield },
-              { id: 'settings', label: 'Pengaturan', icon: Settings },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === item.id
-                  ? 'bg-gradient-to-r from-[#6C5DD3] to-[#6C5DD3]/80 text-white shadow-md shadow-[#6C5DD3]/20'
-                  : 'text-white/60 hover:bg-white/5 hover:text-white'
-                  }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* User Profile Section */}
-        <div className="flex-shrink-0 p-4 border-t border-white/5 bg-[#0F0F1A]">
-          <div className="flex items-center gap-2.5 mb-3 p-2 rounded-lg bg-white/5">
-            <SafeAvatar
-              src={user.avatar}
-              name={user.name}
-              className="w-9 h-9 rounded-lg ring-2 ring-[#6C5DD3]/50"
-              fallbackBgClassName={user.isAdmin ? 'bg-gradient-to-br from-red-500 to-rose-600' : undefined}
-              fallbackClassName="text-sm"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-medium text-sm truncate">{user.name}</p>
-              <p className="text-white/50 text-xs flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
-                Administrator
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 border border-red-500/20 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Keluar
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 lg:ml-64 p-4 lg:p-8 bg-[#0F0F1A]">
-        {/* Mobile Header with Menu Button */}
-        <div className="flex items-center gap-4 mb-4 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10 transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-bold text-white capitalize">{activeTab.replace('-', ' ')}</h1>
-        </div>
-
-        {/* Header (Desktop) */}
-        <div className="hidden lg:flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-white/40 mb-1">
-              <Link to="/" className="hover:text-white transition-colors">Home</Link>
-              <span>/</span>
-              <Link to="/admin" className="hover:text-white transition-colors">Admin</Link>
-              <span>/</span>
-              <span className="text-white/60 capitalize">{activeTab.replace('-', ' ')}</span>
-            </div>
-            <h1 className="text-2xl font-bold text-white capitalize">{activeTab.replace('-', ' ')}</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5">
-              <Film className="w-4 h-4 text-[#6C5DD3]" />
-              <span className="text-white/70 text-sm">{animeList.length} Anime</span>
-            </div>
-            <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5">
-              <span className="text-white/50 text-sm">{new Date().toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Content */}
-        {activeTab === 'dashboard' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {/* Live Stats from Database */}
-            <AdminStats />
-          </motion.div>
+        {/* Sidebar Overlay (Mobile) */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
         )}
 
-        {/* Anime Management */}
-        {activeTab === 'anime' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="text"
-                    placeholder="Cari anime..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-12 pr-4 py-3 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
-                  />
-                </div>
-                {/* Status Filter Buttons */}
-                <div className="flex items-center gap-2 bg-[#1A1A2E] border border-white/10 rounded-xl p-1">
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'all'
-                      ? 'bg-[#6C5DD3] text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    Semua ({animeList.length})
-                  </button>
-                  <button
-                    onClick={() => setStatusFilter('Ongoing')}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'Ongoing'
-                      ? 'bg-green-500 text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    Ongoing ({animeList.filter(a => a.status === 'Ongoing').length})
-                  </button>
-                  <button
-                    onClick={() => setStatusFilter('Completed')}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'Completed'
-                      ? 'bg-blue-500 text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    Completed ({animeList.filter(a => a.status === 'Completed').length})
-                  </button>
-                </div>
-              </div>
-              <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Anime
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">Tambah Anime Baru</DialogTitle>
-                  </DialogHeader>
-
-                  {/* API Search Section */}
-                  <div className="bg-white/5 p-4 rounded-xl mt-4 border border-white/10">
-                    <h3 className="text-white text-sm font-medium mb-3">Impor dari Server</h3>
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        placeholder="Cari judul anime di server..."
-                        className="flex-1 px-4 py-2 bg-[#1A1A2E] border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none"
-                        onKeyDown={async (e) => {
-                          if (e.key === 'Enter') {
-                            const query = e.currentTarget.value;
-                            if (!query) return;
-
-                            try {
-                              logger.log('[Admin] Searching for:', query);
-                              const url = `${getApiUrl(API_CONFIG.endpoints.search)}?q=${query}`;
-                              logger.log('[Admin] Search URL:', url);
-
-                              const res = await fetch(url);
-                              logger.log('[Admin] Response status:', res.status);
-
-                              const data = await res.json();
-                              logger.log('[Admin] Raw API response:', data);
-
-                              // DramaBos format: { code: 0, data: [...] }
-                              const results = data?.data || [];
-                              logger.log('[Admin] Extracted results:', results);
-
-                              if (Array.isArray(results)) {
-                                setApiSearchResults(results);
-                                logger.log('[Admin] Set results, count:', results.length);
-                              } else {
-                                logger.warn('[Admin] Results not an array:', results);
-                                setApiSearchResults([]);
-                              }
-                            } catch (err) {
-                              logger.error('[Admin] Search error:', err);
-                              setApiSearchResults([]);
-                            }
-                          }
-                        }}
-                      />
-                      <Button className="bg-white/10 hover:bg-white/20">
-                        <Search className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {/* Results Container */}
-                    {apiSearchResults.length > 0 && (
-                      <div className="max-h-40 overflow-y-auto space-y-1 bg-[#0F0F1A] rounded-lg p-2 border border-white/5">
-                        {apiSearchResults.map((item) => (
-                          <div
-                            key={item.slug || item.url || Math.random()}
-                            className="p-2 hover:bg-white/5 rounded cursor-pointer flex gap-3 items-center transition-colors"
-                            onClick={async () => {
-                              // Parse release year
-                              let year = new Date().getFullYear();
-                              if (item.rilis) {
-                                const date = new Date(item.rilis);
-                                if (!isNaN(date.getFullYear())) {
-                                  year = date.getFullYear();
-                                }
-                              }
-
-                              // Parse status
-                              let status: 'Ongoing' | 'Completed' = 'Ongoing';
-                              if (item.status === 'Completed') status = 'Completed';
-
-                              // Parse rating
-                              let rating = 0;
-                              if (item.score) {
-                                rating = parseFloat(item.score) || 0;
-                              }
-
-
-                              logger.log('[Admin] Selected item:', item);
-                              const slug = item.slug || item.url || '';
-                              logger.log('[Admin] Fetching detail for slug:', slug);
-
-                              // Fetch anime detail to get episode data and metadata
-                              let episodeData: any[] = [];
-                              let detailStudio = item.studio || 'Unknown';
-                              let detailRating = 0;
-                              let detailSynopsis = item.synopsis || item.sinopsis || '';
-                              let detailGenres = item.genres || item.genre || [];
-
-                              try {
-                                const detailRes = await fetch(`${getApiUrl(API_CONFIG.endpoints.detail)}/${slug}`);
-                                const detailData = await detailRes.json();
-
-                                logger.log('[Admin] Detail API response:', detailData);
-
-                                // DramaBos format: { code: 0, data: { episodes: [...], studio, rating, ... } }
-                                const detail = detailData.data || {};
-                                const episodes = detail.episodes || [];
-                                logger.log('[Admin] Episodes from detail:', episodes);
-
-                                episodeData = episodes.map((ep: any, idx: number) => ({
-                                  episodeNumber: parseInt(ep.ep) || idx + 1,
-                                  slug: ep.slug || '',
-                                  title: ep.title || `Episode ${ep.ep || idx + 1}`,
-                                  releaseDate: ep.date || '',
-                                }));
-
-                                // Extract additional metadata from detail
-                                if (detail.studio) detailStudio = detail.studio;
-                                if (detail.rating) {
-                                  // Rating might be "Rating 8.78" format
-                                  const ratingMatch = detail.rating.match(/[\d.]+/);
-                                  detailRating = ratingMatch ? parseFloat(ratingMatch[0]) : 0;
-                                }
-                                if (detail.synopsis) detailSynopsis = detail.synopsis;
-                                if (detail.genres && Array.isArray(detail.genres)) detailGenres = detail.genres;
-
-                                logger.log('[Admin] Extracted episodeData:', episodeData);
-                                logger.log('[Admin] Studio:', detailStudio, 'Rating:', detailRating);
-                              } catch (error) {
-                                logger.error('[Admin] Failed to fetch detail:', error);
-                                // Continue without episode data
-                              }
-
-                              // Auto-translate synopsis to Indonesian
-                              let translatedSynopsis = detailSynopsis;
-                              logger.log('[Admin] Original synopsis:', detailSynopsis?.substring(0, 100));
-
-                              if (detailSynopsis && detailSynopsis.trim()) {
-                                try {
-                                  logger.log('[Admin] Translating synopsis to Indonesian...');
-                                  const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ text: detailSynopsis, targetLang: 'id' })
-                                  });
-                                  logger.log('[Admin] Translate response status:', translateRes.status);
-                                  const translateData = await translateRes.json();
-                                  logger.log('[Admin] Translate response:', translateData);
-                                  if (translateData.translated) {
-                                    translatedSynopsis = translateData.translated;
-                                    logger.log('[Admin] Synopsis translated successfully:', translatedSynopsis?.substring(0, 100));
-                                  }
-                                } catch (translateError) {
-                                  logger.error('[Admin] Translation failed, using original:', translateError);
-                                }
-                              } else {
-                                logger.log('[Admin] No synopsis to translate');
-                              }
-
-                              setFormData(prev => ({
-                                ...prev,
-                                id: slug, // ← FIX: Use slug as ID!
-                                title: item.title || item.judul || 'Unknown',
-                                poster: item.img || item.cover || '',
-                                studio: detailStudio,
-                                releasedYear: year,
-                                episodes: item.total_episode || episodeData.length || 0,
-                                status: status,
-                                synopsis: translatedSynopsis,
-                                genres: detailGenres,
-                                rating: detailRating || rating,
-                                episodeData: episodeData,
-                              }));
-                              setApiSearchResults([]); // Clear results after selection
-                            }}
-                          >
-                            <img
-                              src={item.img || item.cover}
-                              alt={item.title || item.judul}
-                              className="w-8 h-10 object-cover rounded"
-                              loading="lazy"
-                            />
-                            <div className="flex-1">
-                              <div className="text-sm text-white">{item.title || item.judul}</div>
-                              <div className="text-xs text-white/50">{item.studio || 'Unknown'} • {item.rating || item.score || 'N/A'}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="col-span-2">
-                      <label className="text-white/70 text-sm">Judul Anime</label>
-                      <input
-                        type="text"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Studio</label>
-                      <input
-                        type="text"
-                        value={formData.studio}
-                        onChange={(e) => setFormData({ ...formData, studio: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Tahun Rilis</label>
-                      <input
-                        type="number"
-                        value={formData.releasedYear}
-                        onChange={(e) => setFormData({ ...formData, releasedYear: parseInt(e.target.value) })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Total Episode</label>
-                      <input
-                        type="number"
-                        value={formData.episodes}
-                        onChange={(e) => setFormData({ ...formData, episodes: parseInt(e.target.value) })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Rating</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        max="10"
-                        value={formData.rating}
-                        onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Status</label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Ongoing' | 'Completed' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="Ongoing" className="bg-[#1A1A2E]">Ongoing</option>
-                        <option value="Completed" className="bg-[#1A1A2E]">Completed</option>
-                      </select>
-                    </div>
-                    {/* Jadwal Rilis - Only show for Ongoing */}
-                    {formData.status === 'Ongoing' && (
-                      <>
-                        <div>
-                          <label className="text-white/70 text-sm">Hari Rilis</label>
-                          <select
-                            value={formData.jadwalRilis?.hari || ''}
-                            onChange={(e) => setFormData({ ...formData, jadwalRilis: { ...formData.jadwalRilis, hari: e.target.value } })}
-                            className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                          >
-                            <option value="" className="bg-[#1A1A2E]">Tidak ada jadwal</option>
-                            <option value="Senin" className="bg-[#1A1A2E]">Senin</option>
-                            <option value="Selasa" className="bg-[#1A1A2E]">Selasa</option>
-                            <option value="Rabu" className="bg-[#1A1A2E]">Rabu</option>
-                            <option value="Kamis" className="bg-[#1A1A2E]">Kamis</option>
-                            <option value="Jumat" className="bg-[#1A1A2E]">Jumat</option>
-                            <option value="Sabtu" className="bg-[#1A1A2E]">Sabtu</option>
-                            <option value="Minggu" className="bg-[#1A1A2E]">Minggu</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-white/70 text-sm">Jam Rilis (WIB)</label>
-                          <input
-                            type="time"
-                            value={formData.jadwalRilis?.jam || ''}
-                            onChange={(e) => setFormData({ ...formData, jadwalRilis: { ...formData.jadwalRilis, jam: e.target.value } })}
-                            className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                          />
-                        </div>
-                      </>
-                    )}
-                    <div>
-                      <label className="text-white/70 text-sm">Tipe</label>
-                      <select
-                        value={formData.type || 'TV'}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value as 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="TV" className="bg-[#1A1A2E]">TV Series</option>
-                        <option value="Movie" className="bg-[#1A1A2E]">Movie</option>
-                        <option value="OVA" className="bg-[#1A1A2E]">OVA</option>
-                        <option value="ONA" className="bg-[#1A1A2E]">ONA</option>
-                        <option value="Special" className="bg-[#1A1A2E]">Special</option>
-                        <option value="Music" className="bg-[#1A1A2E]">Music</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">MAL ID (Optional)</label>
-                      <input
-                        type="number"
-                        value={formData.malId || ''}
-                        onChange={(e) => setFormData({ ...formData, malId: e.target.value ? parseInt(e.target.value) : undefined })}
-                        placeholder="MyAnimeList ID"
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">TMDB ID (Optional)</label>
-                      <input
-                        type="number"
-                        value={formData.tmdbId || ''}
-                        onChange={(e) => setFormData({ ...formData, tmdbId: e.target.value ? parseInt(e.target.value) : undefined })}
-                        placeholder="TheMovieDB ID"
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-white/70 text-sm">Sinopsis</label>
-                      <textarea
-                        rows={3}
-                        value={formData.synopsis}
-                        onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">URL Trailer (YouTube/Direct)</label>
-                      <input
-                        type="text"
-                        placeholder="https://youtube.com/watch?v=... atau URL video langsung"
-                        value={formData.trailer}
-                        onChange={(e) => setFormData({ ...formData, trailer: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Tipe Trailer</label>
-                      <select
-                        value={formData.trailerType}
-                        onChange={(e) => setFormData({ ...formData, trailerType: e.target.value as 'youtube' | 'direct' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="youtube" className="bg-[#1A1A2E]">YouTube</option>
-                        <option value="direct" className="bg-[#1A1A2E]">Direct Video (MP4)</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <Button onClick={handleAddAnime} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Simpan Anime</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {/* Edit Anime Dialog */}
-              <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-33rem max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">Edit Anime</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="col-span-2">
-                      <label className="text-white/70 text-sm">Judul Anime</label>
-                      <input
-                        type="text"
-                        value={editFormData.title}
-                        onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Studio</label>
-                      <input
-                        type="text"
-                        value={editFormData.studio}
-                        onChange={(e) => setEditFormData({ ...editFormData, studio: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Tahun Rilis</label>
-                      <input
-                        type="number"
-                        value={editFormData.releasedYear}
-                        onChange={(e) => setEditFormData({ ...editFormData, releasedYear: parseInt(e.target.value) })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Total Episode</label>
-                      <input
-                        type="number"
-                        value={editFormData.episodes}
-                        onChange={(e) => setEditFormData({ ...editFormData, episodes: parseInt(e.target.value) })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Rating</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        max="10"
-                        value={editFormData.rating}
-                        onChange={(e) => setEditFormData({ ...editFormData, rating: parseFloat(e.target.value) || 0 })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Status</label>
-                      <select
-                        value={editFormData.status}
-                        onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as 'Ongoing' | 'Completed' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="Ongoing" className="bg-[#1A1A2E]">Ongoing</option>
-                        <option value="Completed" className="bg-[#1A1A2E]">Completed</option>
-                      </select>
-                    </div>
-                    {/* Jadwal Rilis - Only show for Ongoing */}
-                    {editFormData.status === 'Ongoing' && (
-                      <>
-                        <div>
-                          <label className="text-white/70 text-sm">Hari Rilis</label>
-                          <select
-                            value={editFormData.jadwalRilis?.hari || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, jadwalRilis: { ...editFormData.jadwalRilis, hari: e.target.value } })}
-                            className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                          >
-                            <option value="" className="bg-[#1A1A2E]">Tidak ada jadwal</option>
-                            <option value="Senin" className="bg-[#1A1A2E]">Senin</option>
-                            <option value="Selasa" className="bg-[#1A1A2E]">Selasa</option>
-                            <option value="Rabu" className="bg-[#1A1A2E]">Rabu</option>
-                            <option value="Kamis" className="bg-[#1A1A2E]">Kamis</option>
-                            <option value="Jumat" className="bg-[#1A1A2E]">Jumat</option>
-                            <option value="Sabtu" className="bg-[#1A1A2E]">Sabtu</option>
-                            <option value="Minggu" className="bg-[#1A1A2E]">Minggu</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-white/70 text-sm">Jam Rilis (WIB)</label>
-                          <input
-                            type="time"
-                            value={editFormData.jadwalRilis?.jam || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, jadwalRilis: { ...editFormData.jadwalRilis, jam: e.target.value } })}
-                            className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                          />
-                        </div>
-                      </>
-                    )}
-                    <div>
-                      <label className="text-white/70 text-sm">Tipe</label>
-                      <select
-                        value={editFormData.type}
-                        onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value as 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="TV" className="bg-[#1A1A2E]">TV Series</option>
-                        <option value="Movie" className="bg-[#1A1A2E]">Movie</option>
-                        <option value="OVA" className="bg-[#1A1A2E]">OVA</option>
-                        <option value="ONA" className="bg-[#1A1A2E]">ONA</option>
-                        <option value="Special" className="bg-[#1A1A2E]">Special</option>
-                        <option value="Music" className="bg-[#1A1A2E]">Music</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-white/70 text-sm">URL Poster</label>
-                      <input
-                        type="text"
-                        value={editFormData.poster}
-                        onChange={(e) => setEditFormData({ ...editFormData, poster: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-white/70 text-sm">Sinopsis</label>
-                      <textarea
-                        rows={3}
-                        value={editFormData.synopsis}
-                        onChange={(e) => setEditFormData({ ...editFormData, synopsis: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">URL Trailer (YouTube/Direct)</label>
-                      <input
-                        type="text"
-                        placeholder="https://youtube.com/watch?v=... atau URL video langsung"
-                        value={editFormData.trailer}
-                        onChange={(e) => setEditFormData({ ...editFormData, trailer: e.target.value })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-white/70 text-sm">Tipe Trailer</label>
-                      <select
-                        value={editFormData.trailerType}
-                        onChange={(e) => setEditFormData({ ...editFormData, trailerType: e.target.value as 'youtube' | 'direct' })}
-                        className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
-                      >
-                        <option value="youtube" className="bg-[#1A1A2E]">YouTube</option>
-                        <option value="direct" className="bg-[#1A1A2E]">Direct Video (MP4)</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <Button onClick={handleUpdateAnime} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Update Anime</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Anime Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredAnime.map((anime) => {
-                const episodeDataCount = anime.episodeData?.length || 0;
-                const totalEpisodes = anime.episodes || 0;
-
-                return (
-                  <motion.div
-                    key={anime.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden group hover:border-[#6C5DD3]/30 transition-all hover:shadow-lg hover:shadow-[#6C5DD3]/10"
-                  >
-                    {/* Poster Section */}
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={anime.poster}
-                        alt={anime.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A2E] via-transparent to-transparent" />
-
-                      {/* Status Badge */}
-                      <span className={`absolute top-3 left-3 px-2.5 py-1 text-xs font-medium rounded-lg ${anime.status === 'Ongoing'
-                        ? 'bg-green-500/90 text-white'
-                        : 'bg-blue-500/90 text-white'
-                        }`}>
-                        {anime.status}
-                      </span>
-
-                      {/* Rating Badge */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg">
-                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white text-xs font-medium">{anime.rating}</span>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleEditAnime(anime)}
-                          className="p-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] rounded-lg text-white transition-colors"
-                          title="Edit Anime"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedAnimeForEpisodes(anime);
-                            setActiveTab('episodes');
-                          }}
-                          className="p-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors"
-                          title="Kelola Episode"
-                        >
-                          <PlaySquare className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteAnime(anime.id)}
-                          className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
-                          title="Hapus Anime"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Info Section */}
-                    <div className="p-4">
-                      <h3 className="text-white font-semibold text-sm line-clamp-1 mb-1">{anime.title}</h3>
-                      <p className="text-white/40 text-xs mb-3">{anime.studio}</p>
-
-                      {/* Episode Stats */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg">
-                          <Film className="w-4 h-4 text-[#6C5DD3]" />
-                          <div className="text-xs">
-                            <span className="text-white font-medium">{totalEpisodes}</span>
-                            <span className="text-white/40"> episode</span>
-                          </div>
-                        </div>
-                        <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg ${episodeDataCount > 0 ? 'bg-green-500/10' : 'bg-white/5'
-                          }`}>
-                          <Download className="w-4 h-4 text-green-400" />
-                          <div className="text-xs">
-                            <span className={`font-medium ${episodeDataCount > 0 ? 'text-green-400' : 'text-white/40'}`}>
-                              {episodeDataCount}
-                            </span>
-                            <span className="text-white/40"> scraped</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Views */}
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5 text-white/40">
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>{(anime.views || 0).toLocaleString()} views</span>
-                        </div>
-                        <span className="text-white/30">{anime.releasedYear}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Empty State */}
-            {filteredAnime.length === 0 && (
-              <div className="text-center py-20 bg-[#1A1A2E] rounded-2xl border border-white/5">
-                <Film className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                <h3 className="text-xl font-semibold text-white mb-2">Tidak ada anime ditemukan</h3>
-                <p className="text-white/50">Coba ubah kata kunci pencarian</p>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Schedule Management */}
-        {activeTab === 'kelola-jadwal' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <AdminSchedule
-              animeList={animeList}
-              updateAnime={updateAnime}
-              showToast={showToast}
-            />
-          </motion.div>
-        )}
-
-        {/* Add Anime Interaction Tab (Jikan Integration) */}
-        {activeTab === 'add-anime' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {/* Note: TMDB Auto-import disabled (requires API key). Use Jikan API below instead. */}
-
-            <h2 className="text-xl font-bold text-white mb-6">Tambah Anime Baru (via Jikan API)</h2>
-
-            <div className="flex gap-4 mb-8">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  type="text"
-                  placeholder="Cari judul anime di MyAnimeList (Jikan)..."
-                  className="w-full pl-12 pr-4 py-4 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3] text-lg"
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter') {
-                      const query = e.currentTarget.value;
-                      if (!query) return;
-                      try {
-                        setApiSearchResults([]);
-                        const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=12`);
-                        const data = await res.json();
-                        setApiSearchResults(data.data || []);
-                      } catch (err) {
-                        logger.error('Jikan Error:', err);
-                      }
-                    }
-                  }}
-                />
-              </div>
-              <Button className="h-full py-4 px-8 bg-[#6C5DD3] hover:bg-[#5a4ec0]">Cari</Button>
-            </div>
-
-            {/* Results Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {apiSearchResults.map((anime: any, index: number) => (
-                <div key={`${anime.mal_id}-${index}`} className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden hover:border-[#6C5DD3] transition-colors group relative">
-                  <div className="aspect-[2/3] relative">
-                    <img
-                      src={anime.images?.jpg?.large_image_url}
-                      alt={anime.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                      <Button
-                        onClick={async () => {
-                          // Generate readable ID (slug)
-                          const slug = anime.title
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]+/g, '-')
-                            .replace(/^-|-$/g, '');
-                          const customId = `${slug}-${anime.mal_id}`;
-
-                          // Fetch TMDB ID from Jikan external links
-                          let tmdbId: number | undefined;
-                          try {
-                            const extRes = await fetch(`https://api.jikan.moe/v4/anime/${anime.mal_id}/external`);
-                            const extData = await extRes.json();
-                            const tmdbLink = extData.data?.find((link: any) => link.name === 'TheMovieDB');
-                            if (tmdbLink?.url) {
-                              // Extract TMDB ID from URL like: https://themoviedb.org/tv/12345
-                              const match = tmdbLink.url.match(/\/tv\/(\d+)/);
-                              if (match) tmdbId = parseInt(match[1]);
-                            }
-                          } catch (e) {
-                            logger.warn('Failed to fetch TMDB ID:', e);
-                          }
-
-                          // Map Jikan type to our type enum
-                          const typeMapping: Record<string, 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music'> = {
-                            'TV': 'TV',
-                            'Movie': 'Movie',
-                            'OVA': 'OVA',
-                            'ONA': 'ONA',
-                            'Special': 'Special',
-                            'Music': 'Music',
-                          };
-                          const animeType = typeMapping[anime.type] || 'TV';
-
-                          // Auto-translate synopsis to Indonesian
-                          let translatedSynopsis = anime.synopsis || '';
-                          if (anime.synopsis && anime.synopsis.trim()) {
-                            try {
-                              logger.log('[Admin/Jikan] Translating synopsis to Indonesian...');
-                              const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ text: anime.synopsis, targetLang: 'id' })
-                              });
-                              const translateData = await translateRes.json();
-                              if (translateData.translated) {
-                                translatedSynopsis = translateData.translated;
-                                logger.log('[Admin/Jikan] Synopsis translated successfully');
-                              }
-                            } catch (translateError) {
-                              logger.error('[Admin/Jikan] Translation failed:', translateError);
-                            }
-                          }
-
-                          const newAnime = {
-                            id: customId,
-                            title: anime.title,
-                            studio: anime.studios?.[0]?.name || 'Unknown',
-                            releasedYear: anime.year || new Date(anime.aired?.from).getFullYear() || 0,
-                            episodes: anime.episodes || 0,
-                            rating: anime.score || 0,
-                            status: (anime.status === 'Finished Airing' ? 'Completed' : 'Ongoing') as 'Ongoing' | 'Completed',
-                            type: animeType,
-                            synopsis: translatedSynopsis,
-                            poster: anime.images?.jpg?.large_image_url,
-                            genres: anime.genres?.map((g: any) => g.name) || [],
-                            malId: anime.mal_id, // Save MAL ID for Smashy Stream
-                            tmdbId, // Save TMDB ID for Smashy Stream /tv endpoint
-                          };
-                          // Call Add Anime
-                          addAnime(newAnime);
-                          // Feedback with modern toast
-                          showToast(`Berhasil menambahkan: ${anime.title}${tmdbId ? ` (TMDB: ${tmdbId})` : ''}`, 'success');
-                        }}
-                        className="w-full bg-[#6C5DD3]"
-                      >
-                        + Tambahkan
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-white font-medium line-clamp-1" title={anime.title}>{anime.title}</h3>
-                    <div className="flex items-center justify-between mt-2 text-xs text-white/50">
-                      <span>{anime.type || 'TV'}</span>
-                      <span className="flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400 fill-current" /> {anime.score || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {apiSearchResults.length === 0 && (
-              <div className="text-center py-20 text-white/30">
-                <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>Ketik judul anime dan tekan Enter untuk mencari</p>
-              </div>
-            )}
-
-          </motion.div>
-        )}
-
-        {/* Manage Episodes Content */}
-        {activeTab === 'episodes' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-
-            {/* Show anime grid when no anime selected */}
-            {!selectedAnimeForEpisodes ? (
-              <>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Kelola Episode</h2>
-                    <p className="text-white/50 text-sm mt-1">Pilih anime untuk mengelola episode</p>
-                  </div>
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="text"
-                    placeholder="Cari anime..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
-                  />
-                </div>
-
-                {/* Anime Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {filteredAnime.map((anime, idx) => {
-                    const episodeDataCount = anime.episodeData?.length || 0;
-                    const totalEpisodes = anime.episodes || 0;
-
-                    return (
-                      <motion.div
-                        key={anime.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: idx * 0.02 }}
-                        onClick={() => setSelectedAnimeForEpisodes(anime)}
-                        className="bg-[#1A1A2E] border border-white/5 rounded-xl overflow-hidden cursor-pointer group hover:border-[#6C5DD3]/50 transition-all hover:scale-105"
-                      >
-                        {/* Poster */}
-                        <div className="relative aspect-[2/3]">
-                          <img
-                            src={anime.poster}
-                            alt={anime.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
-                          {/* Episode Count Badge */}
-                          <div className="absolute bottom-2 left-2 right-2">
-                            <div className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium ${episodeDataCount > 0
-                              ? 'bg-green-500/90 text-white'
-                              : 'bg-black/60 backdrop-blur-sm text-white/80'
-                              }`}>
-                              <PlaySquare className="w-3.5 h-3.5" />
-                              <span>{episodeDataCount}/{totalEpisodes} Episode</span>
-                            </div>
-                          </div>
-
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-[#6C5DD3]/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="text-center text-white">
-                              <Settings className="w-8 h-8 mx-auto mb-2" />
-                              <span className="text-sm font-medium">Kelola Episode</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Title */}
-                        <div className="p-3">
-                          <h3 className="text-white text-sm font-medium line-clamp-2">{anime.title}</h3>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* Empty State */}
-                {filteredAnime.length === 0 && (
-                  <div className="text-center py-20 bg-[#1A1A2E] rounded-2xl border border-white/5">
-                    <Film className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                    <h3 className="text-xl font-semibold text-white mb-2">Tidak ada anime ditemukan</h3>
-                    <p className="text-white/50">Coba ubah kata kunci pencarian</p>
-                  </div>
+        {/* Sidebar */}
+        <aside className={`w-64 bg-gradient-to-b from-[#1A1A2E] to-[#12121F] border-r border-white/5 fixed h-full z-40 transition-transform duration-300 overflow-hidden flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`} data-lenis-prevent>
+          <div className="flex-1 overflow-y-auto p-6 pb-2 admin-sidebar-scroll">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-3 mb-8 group">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg transition-shadow overflow-hidden ${siteLogo ? 'bg-transparent shadow-none' : 'bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] shadow-[#6C5DD3]/20 group-hover:shadow-[#6C5DD3]/40'}`}>
+                {siteLogo ? (
+                  <img src={siteLogo} alt={siteName} className="w-full h-full object-contain" />
+                ) : (
+                  <Film className="w-6 h-6 text-white" />
                 )}
-              </>
-            ) : (
-              <>
-                {/* Episode Management for Selected Anime */}
-                <div className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden">
-                  {/* Header with Anime Info */}
-                  <div className="flex items-start gap-4 p-6 border-b border-white/5">
-                    <img
-                      src={selectedAnimeForEpisodes.poster}
-                      alt={selectedAnimeForEpisodes.title}
-                      className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
-                      loading="lazy"
+              </div>
+              <div>
+                <span className="text-lg font-bold font-heading text-white">{siteName}</span>
+                <span className="block text-xs text-white/40">Admin Panel</span>
+              </div>
+            </Link>
+
+            {/* Nav Section */}
+            <p className="text-xs text-white/30 uppercase tracking-wider mb-2 px-2">Menu</p>
+            <nav className="space-y-1">
+              {[
+                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+                { id: 'anime', label: 'Kelola Anime', icon: Film },
+                { id: 'kelola-jadwal', label: 'Kelola Jadwal', icon: Calendar },
+                { id: 'add-anime', label: 'Tambah Anime', icon: Plus },
+                { id: 'episodes', label: 'Kelola Episode', icon: PlaySquare },
+                { id: 'generate-sub', label: 'Generate Subtitle', icon: Captions },
+                { id: 'hero', label: 'Kelola Hero', icon: ImageIcon },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === item.id
+                    ? 'bg-gradient-to-r from-[#6C5DD3] to-[#6C5DD3]/80 text-white shadow-md shadow-[#6C5DD3]/20'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                    }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Settings Section */}
+            <p className="text-xs text-white/30 uppercase tracking-wider mb-2 px-2 mt-6">Lainnya</p>
+            <nav className="space-y-1">
+              {[
+                { id: 'users', label: 'Kelola User', icon: Users },
+                { id: 'badges', label: 'Kelola Badge', icon: Award },
+                { id: 'moderation', label: 'Moderasi', icon: Shield },
+                { id: 'settings', label: 'Pengaturan', icon: Settings },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === item.id
+                    ? 'bg-gradient-to-r from-[#6C5DD3] to-[#6C5DD3]/80 text-white shadow-md shadow-[#6C5DD3]/20'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                    }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* User Profile Section */}
+          <div className="flex-shrink-0 p-4 border-t border-white/5 bg-[#0F0F1A]">
+            <div className="flex items-center gap-2.5 mb-3 p-2 rounded-lg bg-white/5">
+              <SafeAvatar
+                src={user.avatar}
+                name={user.name}
+                className="w-9 h-9 rounded-lg ring-2 ring-[#6C5DD3]/50"
+                fallbackBgClassName={user.isAdmin ? 'bg-gradient-to-br from-red-500 to-rose-600' : undefined}
+                fallbackClassName="text-sm"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">{user.name}</p>
+                <p className="text-white/50 text-xs flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                  Administrator
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 border border-red-500/20 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Keluar
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-64 p-4 lg:p-8 bg-[#0F0F1A]">
+          {/* Mobile Header with Menu Button */}
+          <div className="flex items-center gap-4 mb-4 lg:hidden">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10 transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-lg font-bold text-white capitalize">{activeTab.replace('-', ' ')}</h1>
+          </div>
+
+          {/* Header (Desktop) */}
+          <div className="hidden lg:flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-2 text-sm text-white/40 mb-1">
+                <Link to="/" className="hover:text-white transition-colors">Home</Link>
+                <span>/</span>
+                <Link to="/admin" className="hover:text-white transition-colors">Admin</Link>
+                <span>/</span>
+                <span className="text-white/60 capitalize">{activeTab.replace('-', ' ')}</span>
+              </div>
+              <h1 className="text-2xl font-bold text-white capitalize">{activeTab.replace('-', ' ')}</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5">
+                <Film className="w-4 h-4 text-[#6C5DD3]" />
+                <span className="text-white/70 text-sm">{animeList.length} Anime</span>
+              </div>
+              <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5">
+                <span className="text-white/50 text-sm">{new Date().toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Dashboard Content */}
+          {activeTab === 'dashboard' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Live Stats from Database */}
+              <AdminStats />
+            </motion.div>
+          )}
+
+          {/* Anime Management */}
+          {activeTab === 'anime' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                    <input
+                      type="text"
+                      placeholder="Cari anime..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-12 pr-4 py-3 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h2 className="text-xl font-bold text-white line-clamp-1">{selectedAnimeForEpisodes.title}</h2>
-                          <p className="text-white/50 text-sm mt-1">{selectedAnimeForEpisodes.studio} • {selectedAnimeForEpisodes.releasedYear}</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className={`px-2 py-1 text-xs rounded-lg ${selectedAnimeForEpisodes.status === 'Ongoing'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-blue-500/20 text-blue-400'
-                              }`}>
-                              {selectedAnimeForEpisodes.status}
-                            </span>
-                            <span className="text-white/40 text-sm">
-                              {selectedAnimeForEpisodes.episodeData?.length || 0}/{selectedAnimeForEpisodes.episodes || 0} Episode Scraped
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => setSelectedAnimeForEpisodes(null)}
-                          variant="ghost"
-                          className="text-white/50 hover:text-white hover:bg-white/10"
-                        >
-                          ← Kembali
-                        </Button>
-                      </div>
-                    </div>
                   </div>
+                  {/* Status Filter Buttons */}
+                  <div className="flex items-center gap-2 bg-[#1A1A2E] border border-white/10 rounded-xl p-1">
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'all'
+                        ? 'bg-[#6C5DD3] text-white'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      Semua ({animeList.length})
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('Ongoing')}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'Ongoing'
+                        ? 'bg-green-500 text-white'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      Ongoing ({animeList.filter(a => a.status === 'Ongoing').length})
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('Completed')}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${statusFilter === 'Completed'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      Completed ({animeList.filter(a => a.status === 'Completed').length})
+                    </button>
+                  </div>
+                </div>
+                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Anime
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-white">Tambah Anime Baru</DialogTitle>
+                    </DialogHeader>
 
-                  {/* Action Buttons */}
-                  <div className="p-6 border-b border-white/5 bg-white/[0.02]">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {/* Auto Scrape Button */}
-                      <Button
-                        onClick={() => {
-                          setScrapeUrl(''); // Clear URL for auto-search
-                          handleScrapeEpisodes();
-                        }}
-                        disabled={isScraping}
-                        className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {isScraping ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping...</>
-                        ) : (
-                          <><Download className="w-4 h-4 mr-2" /> Scrape Otomatis</>
-                        )}
-                      </Button>
-
-                      {/* Manual Episode Button */}
-                      <Button onClick={createNewEpisode} className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
-                        <Plus className="w-4 h-4 mr-2" /> Tambah Episode Manual
-                      </Button>
-
-                      {/* Generate All Thumbnails Button */}
-                      <Button 
-                        onClick={async () => {
-                          try {
-                            toast({ title: 'Generating...', description: 'Membuat thumbnail untuk semua episode', variant: 'default' });
-                            const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/thumbnails/all`, {
-                              method: 'POST',
-                            });
-                            if (!res.ok) {
-                              const errData = await res.json().catch(() => ({}));
-                              throw new Error(errData.error || `HTTP ${res.status}`);
-                            }
-                            const data = await res.json();
-                            toast({ 
-                              title: 'Selesai!', 
-                              description: `${data.summary.generated} generated, ${data.summary.skipped} skipped, ${data.summary.failed} failed`, 
-                              variant: 'success' 
-                            });
-                            // Refresh anime data
-                            const animeRes = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
-                            if (animeRes.ok) {
-                              const refreshedAnime = await animeRes.json();
-                              setSelectedAnimeForEpisodes(refreshedAnime);
-                              updateAnime(refreshedAnime.id, refreshedAnime);
-                            }
-                          } catch (err: any) {
-                            toast({ title: 'Error', description: err.message, variant: 'destructive' });
-                          }
-                        }}
-                        variant="outline"
-                        className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-                      >
-                        <Camera className="w-4 h-4 mr-2" /> Generate All Thumbnails
-                      </Button>
-                    </div>
-
-                    {/* Manual URL Scrape Section */}
-                    <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                      <label className="text-white/70 text-sm mb-2 block">Atau scrape dari URL spesifik:</label>
-                      <div className="flex gap-3">
+                    {/* API Search Section */}
+                    <div className="bg-white/5 p-4 rounded-xl mt-4 border border-white/10">
+                      <h3 className="text-white text-sm font-medium mb-3">Impor dari Server</h3>
+                      <div className="flex gap-2 mb-3">
                         <input
                           type="text"
-                          value={scrapeUrl}
-                          onChange={(e) => setScrapeUrl(e.target.value)}
-                          placeholder="https://nontonanimeid.boats/anime/... atau https://otakudesu.cloud/anime/..."
-                          className="flex-1 px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#6C5DD3] text-sm"
+                          placeholder="Cari judul anime di server..."
+                          className="flex-1 px-4 py-2 bg-[#1A1A2E] border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none"
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              const query = e.currentTarget.value;
+                              if (!query) return;
+
+                              try {
+                                logger.log('[Admin] Searching for:', query);
+                                const url = `${getApiUrl(API_CONFIG.endpoints.search)}?q=${query}`;
+                                logger.log('[Admin] Search URL:', url);
+
+                                const res = await fetch(url);
+                                logger.log('[Admin] Response status:', res.status);
+
+                                const data = await res.json();
+                                logger.log('[Admin] Raw API response:', data);
+
+                                // DramaBos format: { code: 0, data: [...] }
+                                const results = data?.data || [];
+                                logger.log('[Admin] Extracted results:', results);
+
+                                if (Array.isArray(results)) {
+                                  setApiSearchResults(results);
+                                  logger.log('[Admin] Set results, count:', results.length);
+                                } else {
+                                  logger.warn('[Admin] Results not an array:', results);
+                                  setApiSearchResults([]);
+                                }
+                              } catch (err) {
+                                logger.error('[Admin] Search error:', err);
+                                setApiSearchResults([]);
+                              }
+                            }
+                          }}
                         />
-                        <Button
-                          onClick={handleScrapeEpisodes}
-                          disabled={isScraping || !scrapeUrl}
-                          className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50"
-                        >
-                          <Download className="w-4 h-4 mr-2" /> Scrape URL
+                        <Button className="bg-white/10 hover:bg-white/20">
+                          <Search className="w-4 h-4" />
                         </Button>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Subtitle Generation Section */}
-                  <div className="p-6 border-b border-white/5 bg-white/[0.02]">
-                    <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                      <span className="text-lg">🎬</span> AI Subtitle Generation
-                    </h4>
-                    <div className="flex flex-wrap items-end gap-3">
-                      <div>
-                        <label className="text-white/50 text-xs block mb-1">Provider</label>
-                        <select
-                          value={subtitleProvider}
-                          onChange={(e) => setSubtitleProvider(e.target.value as 'openai' | 'local')}
-                          className="px-3 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#6C5DD3]"
-                        >
-                          <option value="openai">OpenAI Whisper API (~$0.006/menit)</option>
-                          <option value="local">Local Whisper (Gratis, lebih lambat)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-white/50 text-xs block mb-1">Bahasa</label>
-                        <select
-                          value={subtitleLanguage || 'auto'}
-                          onChange={(e) => setSubtitleLanguage(e.target.value === 'auto' ? null : e.target.value)}
-                          className="px-3 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#6C5DD3]"
-                        >
-                          <option value="auto">Auto Detect</option>
-                          <option value="ja">Jepang (Original)</option>
-                          <option value="id">Indonesia (Translate)</option>
-                          <option value="en">English (Translate)</option>
-                        </select>
-                      </div>
-                      <p className="text-white/40 text-xs">
-                        Klik tombol 🎬 pada episode untuk generate subtitle otomatis
-                      </p>
-
-                      {/* Progress Indicator */}
-                      {isGeneratingSubtitle && (
-                        <div className="mt-4 p-4 bg-gradient-to-r from-[#6C5DD3]/20 to-blue-600/20 rounded-xl border border-[#6C5DD3]/30">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#6C5DD3]/30 flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 text-[#6C5DD3] animate-spin" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-white">
-                                Episode {generatingEpisode} - Generating Subtitle
-                              </div>
-                              <div className="text-xs text-[#00C2FF] mt-0.5">
-                                {subtitleProgress || 'Mempersiapkan...'}
-                              </div>
-                              <div className="text-[10px] text-white/40 mt-1">
-                                ⏱️ Model large-v3: ~30-60 menit untuk video 24 menit (CPU)
-                              </div>
-                            </div>
-                          </div>
-                          {/* Animated Progress Bar */}
-                          <div className="mt-3 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#00C2FF] rounded-full animate-pulse" style={{ width: '100%' }}></div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Episode Cards Grid */}
-                  <div className="p-6">
-                    <h3 className="text-white font-semibold mb-4">Daftar Episode ({selectedAnimeForEpisodes.episodeData?.length || 0})</h3>
-
-                    {selectedAnimeForEpisodes.episodeData && selectedAnimeForEpisodes.episodeData.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-                        {[...selectedAnimeForEpisodes.episodeData]
-                          .sort((a: any, b: any) => a.ep - b.ep)
-                          .map((ep: any, idx: number) => {
-                            const hasDirectStream = ep.streams?.some((s: any) => s.type === 'direct');
-                            const hasSubtitle = !!ep.subtitle?.url;
-
-                            return (
-                              <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: idx * 0.01 }}
-                                className={`relative group p-3 rounded-lg border text-center transition-all ${ep.streams?.length > 0
-                                  ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
-                                  : 'bg-white/5 border-white/10 hover:border-white/30'
-                                  }`}
-                              >
-                                {/* Episode Number */}
-                                <div className={`text-xl font-bold ${ep.streams?.length > 0 ? 'text-green-400' : 'text-white/60'}`}>
-                                  {ep.ep}
-                                </div>
-
-                                {/* Stream Count */}
-                                <div className={`text-[10px] mt-1 ${ep.streams?.length > 0 ? 'text-green-400/70' : 'text-white/30'}`}>
-                                  {ep.streams?.length || 0} stream
-                                </div>
-
-                                {/* Subtitle Status Badge */}
-                                {hasSubtitle && (
-                                  <div className="absolute top-1 right-1 px-1 py-0.5 bg-blue-500/90 text-white text-[8px] rounded font-medium">
-                                    CC
-                                  </div>
-                                )}
-
-                                {/* Action Buttons on Hover */}
-                                <div className="absolute inset-0 bg-black/80 rounded-lg flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); openEpisodeEdit(ep); }}
-                                    className="p-1.5 bg-[#6C5DD3] hover:bg-[#5a4ec0] rounded text-white transition-colors"
-                                    title="Edit Episode"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  {hasDirectStream && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleGenerateSubtitle(ep.ep);
-                                      }}
-                                      disabled={isGeneratingSubtitle}
-                                      className={`p-1.5 rounded text-white transition-all ${isGeneratingSubtitle && generatingEpisode === ep.ep
-                                        ? 'bg-gradient-to-r from-[#6C5DD3] to-blue-600 animate-pulse shadow-lg shadow-[#6C5DD3]/50'
-                                        : hasSubtitle
-                                          ? 'bg-blue-600 hover:bg-blue-700'
-                                          : 'bg-orange-600 hover:bg-orange-700'
-                                        } ${isGeneratingSubtitle && generatingEpisode !== ep.ep ? 'opacity-30' : ''}`}
-                                      title={
-                                        isGeneratingSubtitle && generatingEpisode === ep.ep
-                                          ? `⏳ ${subtitleProgress || 'Processing...'}`
-                                          : hasSubtitle ? 'Regenerate Subtitle' : 'Generate Subtitle'
-                                      }
-                                    >
-                                      {isGeneratingSubtitle && generatingEpisode === ep.ep ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                      ) : (
-                                        <span className="text-xs">{hasSubtitle ? '🔄' : '🎬'}</span>
-                                      )}
-                                    </button>
-                                  )}
-
-                                  {/* Delete Subtitle Button */}
-                                  {hasSubtitle && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteSubtitle(ep.ep);
-                                      }}
-                                      disabled={isGeneratingSubtitle}
-                                      className="p-1.5 bg-red-600 hover:bg-red-700 rounded text-white transition-colors disabled:opacity-30"
-                                      title="Hapus Subtitle"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                </div>
-                              </motion.div>
-                            );
-                          })
-                        }
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 bg-white/5 rounded-xl border border-white/5">
-                        <PlaySquare className="w-12 h-12 mx-auto mb-3 text-white/20" />
-                        <h3 className="text-white font-medium mb-1">Belum ada episode</h3>
-                        <p className="text-white/40 text-sm">Klik "Scrape Otomatis" atau tambah episode manual</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Batch Upload Section */}
-                <div className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden mt-6">
-                  <div className="p-6 border-b border-white/5">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <CloudUpload className="w-5 h-5 text-[#6C5DD3]" />
-                      Batch Upload Episode
-                    </h3>
-                    <p className="text-white/40 text-sm mt-1">Upload banyak episode sekaligus ke R2 Cloud</p>
-                  </div>
-
-                  <div className="p-6 space-y-4">
-                    {/* Quality Selection */}
-                    <div className="flex items-center gap-4">
-                      <label className="text-white/70 text-sm">Kualitas untuk semua file:</label>
-                      <select
-                        value={batchQuality}
-                        onChange={(e) => setBatchQuality(e.target.value)}
-                        disabled={isBatchUploading}
-                        className="px-4 py-2 bg-[#1A1A2E] border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none appearance-none cursor-pointer"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 12px center',
-                          paddingRight: '36px'
-                        }}
-                      >
-                        <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
-                        <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
-                        <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
-                      </select>
-                    </div>
-
-                    {/* Drop Zone */}
-                    {batchFiles.length === 0 ? (
-                      <div className="relative border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-[#6C5DD3]/50 transition-colors">
-                        <input
-                          type="file"
-                          accept="video/*"
-                          multiple
-                          onChange={(e) => handleBatchFileSelect(e.target.files)}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <Upload className="w-12 h-12 mx-auto mb-4 text-white/30" />
-                        <p className="text-white/70 font-medium">Drop file video di sini atau klik untuk memilih</p>
-                        <p className="text-white/40 text-sm mt-1">Support multiple files (MP4, MKV, dll)</p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* File List */}
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                          {batchFiles.map((item, idx) => (
+                      {/* Results Container */}
+                      {apiSearchResults.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto space-y-1 bg-[#0F0F1A] rounded-lg p-2 border border-white/5">
+                          {apiSearchResults.map((item) => (
                             <div
-                              key={idx}
-                              className={`flex items-center gap-3 p-3 rounded-xl border ${item.status === 'complete' ? 'bg-green-500/10 border-green-500/30' :
-                                item.status === 'error' ? 'bg-red-500/10 border-red-500/30' :
-                                  item.status === 'uploading' ? 'bg-[#6C5DD3]/10 border-[#6C5DD3]/30' :
-                                    'bg-white/5 border-white/10'
-                                }`}
+                              key={item.slug || item.url || Math.random()}
+                              className="p-2 hover:bg-white/5 rounded cursor-pointer flex gap-3 items-center transition-colors"
+                              onClick={async () => {
+                                // Parse release year
+                                let year = new Date().getFullYear();
+                                if (item.rilis) {
+                                  const date = new Date(item.rilis);
+                                  if (!isNaN(date.getFullYear())) {
+                                    year = date.getFullYear();
+                                  }
+                                }
+
+                                // Parse status
+                                let status: 'Ongoing' | 'Completed' = 'Ongoing';
+                                if (item.status === 'Completed') status = 'Completed';
+
+                                // Parse rating
+                                let rating = 0;
+                                if (item.score) {
+                                  rating = parseFloat(item.score) || 0;
+                                }
+
+
+                                logger.log('[Admin] Selected item:', item);
+                                const slug = item.slug || item.url || '';
+                                logger.log('[Admin] Fetching detail for slug:', slug);
+
+                                // Fetch anime detail to get episode data and metadata
+                                let episodeData: any[] = [];
+                                let detailStudio = item.studio || 'Unknown';
+                                let detailRating = 0;
+                                let detailSynopsis = item.synopsis || item.sinopsis || '';
+                                let detailGenres = item.genres || item.genre || [];
+
+                                try {
+                                  const detailRes = await fetch(`${getApiUrl(API_CONFIG.endpoints.detail)}/${slug}`);
+                                  const detailData = await detailRes.json();
+
+                                  logger.log('[Admin] Detail API response:', detailData);
+
+                                  // DramaBos format: { code: 0, data: { episodes: [...], studio, rating, ... } }
+                                  const detail = detailData.data || {};
+                                  const episodes = detail.episodes || [];
+                                  logger.log('[Admin] Episodes from detail:', episodes);
+
+                                  episodeData = episodes.map((ep: any, idx: number) => ({
+                                    episodeNumber: parseInt(ep.ep) || idx + 1,
+                                    slug: ep.slug || '',
+                                    title: ep.title || `Episode ${ep.ep || idx + 1}`,
+                                    releaseDate: ep.date || '',
+                                  }));
+
+                                  // Extract additional metadata from detail
+                                  if (detail.studio) detailStudio = detail.studio;
+                                  if (detail.rating) {
+                                    // Rating might be "Rating 8.78" format
+                                    const ratingMatch = detail.rating.match(/[\d.]+/);
+                                    detailRating = ratingMatch ? parseFloat(ratingMatch[0]) : 0;
+                                  }
+                                  if (detail.synopsis) detailSynopsis = detail.synopsis;
+                                  if (detail.genres && Array.isArray(detail.genres)) detailGenres = detail.genres;
+
+                                  logger.log('[Admin] Extracted episodeData:', episodeData);
+                                  logger.log('[Admin] Studio:', detailStudio, 'Rating:', detailRating);
+                                } catch (error) {
+                                  logger.error('[Admin] Failed to fetch detail:', error);
+                                  // Continue without episode data
+                                }
+
+                                // Auto-translate synopsis to Indonesian
+                                let translatedSynopsis = detailSynopsis;
+                                logger.log('[Admin] Original synopsis:', detailSynopsis?.substring(0, 100));
+
+                                if (detailSynopsis && detailSynopsis.trim()) {
+                                  try {
+                                    logger.log('[Admin] Translating synopsis to Indonesian...');
+                                    const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ text: detailSynopsis, targetLang: 'id' })
+                                    });
+                                    logger.log('[Admin] Translate response status:', translateRes.status);
+                                    const translateData = await translateRes.json();
+                                    logger.log('[Admin] Translate response:', translateData);
+                                    if (translateData.translated) {
+                                      translatedSynopsis = translateData.translated;
+                                      logger.log('[Admin] Synopsis translated successfully:', translatedSynopsis?.substring(0, 100));
+                                    }
+                                  } catch (translateError) {
+                                    logger.error('[Admin] Translation failed, using original:', translateError);
+                                  }
+                                } else {
+                                  logger.log('[Admin] No synopsis to translate');
+                                }
+
+                                setFormData(prev => ({
+                                  ...prev,
+                                  id: slug, // ← FIX: Use slug as ID!
+                                  title: item.title || item.judul || 'Unknown',
+                                  poster: item.img || item.cover || '',
+                                  studio: detailStudio,
+                                  releasedYear: year,
+                                  episodes: item.total_episode || episodeData.length || 0,
+                                  status: status,
+                                  synopsis: translatedSynopsis,
+                                  genres: detailGenres,
+                                  rating: detailRating || rating,
+                                  episodeData: episodeData,
+                                }));
+                                setApiSearchResults([]); // Clear results after selection
+                              }}
                             >
-                              {/* Episode Number Input */}
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className="text-white/50 text-xs">Ep</span>
-                                <input
-                                  type="number"
-                                  value={item.episodeNumber}
-                                  onChange={(e) => updateBatchEpisodeNumber(idx, parseInt(e.target.value) || 1)}
-                                  disabled={isBatchUploading || item.status === 'complete'}
-                                  className="w-14 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-center text-sm focus:border-[#6C5DD3] outline-none"
-                                />
+                              <img
+                                src={item.img || item.cover}
+                                alt={item.title || item.judul}
+                                className="w-8 h-10 object-cover rounded"
+                                loading="lazy"
+                              />
+                              <div className="flex-1">
+                                <div className="text-sm text-white">{item.title || item.judul}</div>
+                                <div className="text-xs text-white/50">{item.studio || 'Unknown'} • {item.rating || item.score || 'N/A'}</div>
                               </div>
-
-                              {/* File Name */}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm truncate">{item.file.name}</p>
-                                <p className="text-white/40 text-xs">{(item.file.size / 1024 / 1024).toFixed(1)} MB</p>
-                              </div>
-
-                              {/* Status */}
-                              <div className="flex-shrink-0 w-20">
-                                {item.status === 'pending' && (
-                                  <span className="text-white/50 text-xs">Menunggu</span>
-                                )}
-                                {item.status === 'uploading' && (
-                                  <div className="flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 text-[#6C5DD3] animate-spin" />
-                                    <span className="text-[#6C5DD3] text-xs">{item.progress}%</span>
-                                  </div>
-                                )}
-                                {item.status === 'complete' && (
-                                  <span className="text-green-400 text-xs flex items-center gap-1">
-                                    <Check className="w-3 h-3" /> Selesai
-                                  </span>
-                                )}
-                                {item.status === 'error' && (
-                                  <span className="text-red-400 text-xs">Error</span>
-                                )}
-                              </div>
-
-                              {/* Remove Button */}
-                              {!isBatchUploading && item.status !== 'complete' && (
-                                <button
-                                  onClick={() => removeBatchFile(idx)}
-                                  className="text-white/30 hover:text-red-400 p-1"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
                             </div>
                           ))}
                         </div>
-
-                        {/* Progress Summary */}
-                        {isBatchUploading && (
-                          <div className="bg-white/5 rounded-xl p-4">
-                            <div className="flex justify-between text-sm mb-2">
-                              <span className="text-white/70">Progress Upload</span>
-                              <span className="text-white">{batchFiles.filter(f => f.status === 'complete').length}/{batchFiles.length}</span>
-                            </div>
-                            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#8B7FD3] transition-all"
-                                style={{ width: `${(batchFiles.filter(f => f.status === 'complete').length / batchFiles.length) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={handleBatchUpload}
-                            disabled={isBatchUploading || batchFiles.every(f => f.status === 'complete')}
-                            className="flex-1 bg-[#6C5DD3] hover:bg-[#5a4ec0] disabled:opacity-50"
-                          >
-                            {isBatchUploading ? (
-                              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Mengupload...</>
-                            ) : (
-                              <><Upload className="w-4 h-4 mr-2" /> Mulai Upload ({batchFiles.filter(f => f.status === 'pending').length} file)</>
-                            )}
-                          </Button>
-                          <Button
-                            onClick={clearBatchFiles}
-                            disabled={isBatchUploading}
-                            variant="outline"
-                            className="border-white/20 text-white hover:bg-white/10"
-                          >
-                            <X className="w-4 h-4 mr-2" /> Clear
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Edit Episode Modal */}
-            <Dialog open={isEpisodeModalOpen} onOpenChange={setIsEpisodeModalOpen}>
-              <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-                <DialogHeader className="flex-shrink-0">
-                  <DialogTitle className="text-white">Edit Episode {episodeToEdit?.ep}</DialogTitle>
-                </DialogHeader>
-
-                {episodeToEdit && (
-                  <div className="space-y-6 mt-4 flex-1 overflow-y-auto pr-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-white/70 text-sm">Nomor Episode</label>
-                        <input type="number" value={episodeToEdit.ep} onChange={(e) => setEpisodeToEdit({ ...episodeToEdit, ep: parseInt(e.target.value) })} className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-[#6C5DD3]" />
-                      </div>
-                      <div>
-                        <label className="text-white/70 text-sm">Judul Episode</label>
-                        <input type="text" value={episodeToEdit.title} onChange={(e) => setEpisodeToEdit({ ...episodeToEdit, title: e.target.value })} className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-[#6C5DD3]" />
-                      </div>
-                    </div>
-
-                    {/* Upload Video Section */}
-                    <div className="border-t border-white/10 pt-4">
-                      <h4 className="text-white font-medium mb-4 flex items-center gap-2">
-                        <CloudUpload className="w-5 h-5 text-[#6C5DD3]" />
-                        Upload Video ke Cloud
-                      </h4>
-
-                      <div className="bg-white/5 p-4 rounded-xl">
-                        {/* File Input Row */}
-                        <div className="mb-3">
-                          <label className="text-xs text-white/50 mb-1 block">File Video</label>
-                          <div className="relative">
-                            <input
-                              type="file"
-                              accept="video/*"
-                              onChange={(e) => e.target.files?.[0] && setUploadFile(e.target.files[0])}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <div className={`w-full px-4 py-3 rounded-xl border border-dashed flex items-center gap-3 ${uploadFile ? 'border-green-500/50 bg-green-500/5' : 'border-white/20 bg-[#1A1A2E]'}`}>
-                              {uploadFile ? (
-                                <>
-                                  <Film className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                  <span className="text-white text-sm truncate flex-1 min-w-0">{uploadFile.name}</span>
-                                  <button onClick={(e) => { e.stopPropagation(); setUploadFile(null); }} className="text-white/50 hover:text-white flex-shrink-0">
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="w-5 h-5 text-white/40 flex-shrink-0" />
-                                  <span className="text-white/40 text-sm">Pilih atau drop file video...</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Quality & Upload Row */}
-                        <div className="flex gap-3 items-end">
-                          <div className="w-24 flex-shrink-0">
-                            <label className="text-xs text-white/50 mb-1 block">Kualitas</label>
-                            <select
-                              value={uploadQuality}
-                              onChange={(e) => setUploadQuality(e.target.value)}
-                              className="w-full px-3 py-2.5 bg-[#1A1A2E] rounded-xl border border-white/10 text-white text-sm appearance-none cursor-pointer"
-                              style={{
-                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                                backgroundRepeat: 'no-repeat',
-                                backgroundPosition: 'right 12px center',
-                                paddingRight: '36px'
-                              }}
-                            >
-                              <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
-                              <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
-                              <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
-                            </select>
-                          </div>
-
-                          {/* Upload Button */}
-                          <Button
-                            onClick={handleUploadVideo}
-                            disabled={!uploadFile || isUploading}
-                            className={`flex-1 ${!uploadFile || isUploading ? 'bg-white/10' : 'bg-[#6C5DD3] hover:bg-[#5a4ec0]'}`}
-                          >
-                            {isUploading ? (
-                              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Mengupload...</>
-                            ) : (
-                              <><Upload className="w-4 h-4 mr-2" /> Upload ke Cloud</>
-                            )}
-                          </Button>
-                        </div>
-
-                        {/* Progress Bar */}
-                        {isUploading && (
-                          <div className="mt-4">
-                            <div className="flex justify-between text-xs text-white/50 mb-1">
-                              <span>Uploading...</span>
-                              <span>{uploadProgress}%</span>
-                            </div>
-                            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#8B7FD3] transition-all"
-                                style={{ width: `${uploadProgress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-white/10 pt-4">
-                      <h4 className="text-white font-medium mb-4">Link Stream Manual</h4>
-
-                      {/* Add Stream Form */}
-                      <div className="bg-white/5 p-4 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                        <div className="md:col-span-3">
-                          <label className="text-xs text-white/50 mb-1 block">Server Name</label>
-                          <input type="text" placeholder="e.g. Google Drive" value={streamServer} onChange={(e) => setStreamServer(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm" />
-                        </div>
-                        <div className="md:col-span-4">
-                          <label className="text-xs text-white/50 mb-1 block">URL</label>
-                          <input type="text" placeholder="https://..." value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm" />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-xs text-white/50 mb-1 block">Quality</label>
-                          <select 
-                            value={streamQuality} 
-                            onChange={(e) => setStreamQuality(e.target.value)} 
-                            className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm appearance-none cursor-pointer"
-                            style={{
-                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                              backgroundRepeat: 'no-repeat',
-                              backgroundPosition: 'right 10px center',
-                              paddingRight: '32px'
-                            }}
-                          >
-                            <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
-                            <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
-                            <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
-                            <option value="360p" className="bg-[#1A1A2E] text-white">360p</option>
-                          </select>
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-xs text-white/50 mb-1 block">Type</label>
-                          <select value={streamType} onChange={(e) => setStreamType(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm">
-                            <option value="embed">Embed</option>
-                            <option value="direct">Direct (MP4/Video)</option>
-                            <option value="hls">HLS (m3u8)</option>
-                            <option value="download">Download Only</option>
-                          </select>
-                        </div>
-                        <div className="md:col-span-1">
-                          <Button onClick={handleAddStream} className="w-full bg-[#6C5DD3] p-0 h-[38px]"><Plus className="w-4 h-4" /></Button>
-                        </div>
-                      </div>
-
-                      {/* Stream List */}
-                      <div className="space-y-2">
-                        {episodeToEdit.streams?.map((stream: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg text-sm">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <span className="font-bold text-white shrink-0">{stream.server}</span>
-                              <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-white/70">{stream.quality}</span>
-                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs uppercase">{stream.type}</span>
-                              <span className="text-white/40 truncate text-xs">{stream.url}</span>
-                            </div>
-                            <button onClick={() => handleDeleteStream(idx)} className="text-white/30 hover:text-red-400 p-1"><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        ))}
-                        {(!episodeToEdit.streams || episodeToEdit.streams.length === 0) && (
-                          <p className="text-center text-white/30 text-sm py-2">Belum ada link manual.</p>
-                        )}
-                      </div>
-
-                      {/* Generate Thumbnail */}
-                      {(episodeToEdit.streams?.length > 0 || episodeToEdit.manualStreams?.length > 0) && (
-                        <div className="mt-4 pt-4 border-t border-white/10">
-                          <label className="text-sm font-medium text-white mb-2 block">
-                            {episodeToEdit.thumbnail ? 'Regenerate Thumbnail' : 'Generate Thumbnail'}
-                          </label>
-                          <div className="flex gap-2">
-                            <select 
-                              className="flex-1 px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm"
-                              value={episodeToEdit._thumbnailSource || ''}
-                              onChange={(e) => {
-                                setEpisodeToEdit({ ...episodeToEdit, _thumbnailSource: e.target.value });
-                              }}
-                            >
-                              <option value="">Pilih stream untuk thumbnail...</option>
-                              {/* Direct streams */}
-                              {episodeToEdit.streams
-                                ?.filter((s: any) => s.type === 'direct' || s.type === 'embed')
-                                .map((s: any, i: number) => (
-                                <option key={`stream-${i}`} value={s.url}>{s.server} ({s.quality})</option>
-                              ))}
-                              {/* Manual streams */}
-                              {episodeToEdit.manualStreams?.map((s: any, i: number) => (
-                                <option key={`manual-${i}`} value={s.url}>Manual: {s.server} ({s.quality})</option>
-                              ))}
-                            </select>
-                            <Button 
-                              onClick={async () => {
-                                const videoUrl = episodeToEdit._thumbnailSource || episodeToEdit.streams?.find((s: any) => s.type === 'direct')?.url || episodeToEdit.manualStreams?.[0]?.url;
-                                if (!videoUrl) {
-                                  toast({ title: 'Error', description: 'Pilih stream terlebih dahulu', variant: 'destructive' });
-                                  return;
-                                }
-                                try {
-                                  toast({ title: 'Generating...', description: 'Membuat thumbnail dari video', variant: 'default' });
-                                  const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/episode/${episodeToEdit.ep}/thumbnail`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ videoUrl }),
-                                  });
-                                  console.log('[Admin] Thumbnail response status:', res.status);
-                                  if (!res.ok) {
-                                    const errData = await res.json().catch(() => ({}));
-                                    console.error('[Admin] Thumbnail error:', errData);
-                                    throw new Error(errData.error || `HTTP ${res.status}`);
-                                  }
-                                  const data = await res.json();
-                                  if (data.success) {
-                                    setEpisodeToEdit({ ...episodeToEdit, thumbnail: data.thumbnailUrl, _thumbnailSource: videoUrl });
-                                    toast({ title: 'Success', description: 'Thumbnail berhasil dibuat!', variant: 'success' });
-                                  } else {
-                                    toast({ title: 'Error', description: data.error || 'Gagal membuat thumbnail', variant: 'destructive' });
-                                  }
-                                } catch (err) {
-                                  toast({ title: 'Error', description: 'Terjadi kesalahan saat membuat thumbnail', variant: 'destructive' });
-                                }
-                              }}
-                              disabled={!episodeToEdit._thumbnailSource && !episodeToEdit.streams?.length && !episodeToEdit.manualStreams?.length}
-                              className="bg-[#6C5DD3] hover:bg-[#5a4ec0]"
-                              title={episodeToEdit.thumbnail ? 'Regenerate thumbnail' : 'Generate thumbnail'}
-                            >
-                              <Camera className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          {episodeToEdit.thumbnail && (
-                            <div className="mt-2">
-                              <img 
-                                src={episodeToEdit.thumbnail} 
-                                alt="Thumbnail preview" 
-                                className="w-full h-32 object-cover rounded-lg border border-white/10"
-                              />
-                              <p className="text-xs text-white/50 mt-1">
-                                Klik tombol untuk regenerate dengan timestamp berbeda (random 3-10 menit)
-                              </p>
-                            </div>
-                          )}
-                        </div>
                       )}
                     </div>
-                  </div>
-                )}
 
-                {/* Fixed Footer */}
-                {episodeToEdit && (
-                  <div className="flex-shrink-0 pt-4 border-t border-white/10">
-                    <Button onClick={handleSaveEpisode} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Simpan Perubahan</Button>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-
-          </motion.div>
-        )}
-
-        {/* Users Tab - Placeholder */}
-        {activeTab === 'users' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
-          >
-            <div className="w-20 h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center">
-              <Users className="w-10 h-10 text-white/30" />
-            </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Segera Hadir</h2>
-            <p className="text-white/50">Fitur ini sedang dalam pengembangan</p>
-          </motion.div>
-        )}
-
-        {/* Settings Tab - Website & Sidebar Widget Management */}
-        {activeTab === 'settings' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
-            {/* Header */}
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-2">Pengaturan</h1>
-              <p className="text-white/50">Kelola nama website, deskripsi, dan widget sidebar</p>
-            </div>
-
-            {/* Website Settings */}
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center">
-                    <Settings className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Pengaturan Website</h2>
-                    <p className="text-sm text-white/50">Ubah nama dan deskripsi website</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Site Logo */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Logo Website
-                  </label>
-                  
-                  {/* File Upload */}
-                  <div className="mb-3">
-                    <label className="flex items-center gap-2 px-4 py-2 bg-[#6C5DD3]/20 border border-[#6C5DD3]/50 rounded-lg cursor-pointer hover:bg-[#6C5DD3]/30 transition-colors w-fit">
-                      <CloudUpload className="w-4 h-4 text-[#6C5DD3]" />
-                      <span className="text-sm text-white">
-                        {isUploadingLogo ? 'Mengupload...' : 'Upload Logo'}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleLogoUpload(file);
-                        }}
-                        disabled={isUploadingLogo}
-                        className="hidden"
-                      />
-                    </label>
-                    <p className="text-xs text-white/40 mt-1">Upload gambar logo (PNG, JPG, WEBP). Maks 2MB.</p>
-                  </div>
-                  
-                  {logoUploadError && (
-                    <p className="text-xs text-red-400 mb-2">{logoUploadError}</p>
-                  )}
-                  
-                  {/* URL Input (fallback) */}
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-white/30 text-sm">URL:</span>
-                    </div>
-                    <input
-                      type="text"
-                      value={siteLogo}
-                      onChange={(e) => setSiteLogo(e.target.value)}
-                      className="w-full pl-14 pr-4 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
-                      placeholder="https://example.com/logo.png"
-                    />
-                  </div>
-                  
-                  {/* Preview */}
-                  {siteLogo && (
-                    <div className="mt-3 flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-                      <span className="text-xs text-white/40">Preview:</span>
-                      <div className="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center overflow-hidden">
-                        <img src={siteLogo} alt="Preview" className="w-full h-full object-contain" />
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="col-span-2">
+                        <label className="text-white/70 text-sm">Judul Anime</label>
+                        <input
+                          type="text"
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
                       </div>
-                      <button
-                        onClick={() => setSiteLogo('')}
-                        className="ml-auto text-xs text-red-400 hover:text-red-300"
-                      >
-                        Hapus
-                      </button>
+                      <div>
+                        <label className="text-white/70 text-sm">Studio</label>
+                        <input
+                          type="text"
+                          value={formData.studio}
+                          onChange={(e) => setFormData({ ...formData, studio: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Tahun Rilis</label>
+                        <input
+                          type="number"
+                          value={formData.releasedYear}
+                          onChange={(e) => setFormData({ ...formData, releasedYear: parseInt(e.target.value) })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Total Episode</label>
+                        <input
+                          type="number"
+                          value={formData.episodes}
+                          onChange={(e) => setFormData({ ...formData, episodes: parseInt(e.target.value) })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Rating</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          max="10"
+                          value={formData.rating}
+                          onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Status</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Ongoing' | 'Completed' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="Ongoing" className="bg-[#1A1A2E]">Ongoing</option>
+                          <option value="Completed" className="bg-[#1A1A2E]">Completed</option>
+                        </select>
+                      </div>
+                      {/* Jadwal Rilis - Only show for Ongoing */}
+                      {formData.status === 'Ongoing' && (
+                        <>
+                          <div>
+                            <label className="text-white/70 text-sm">Hari Rilis</label>
+                            <select
+                              value={formData.jadwalRilis?.hari || ''}
+                              onChange={(e) => setFormData({ ...formData, jadwalRilis: { ...formData.jadwalRilis, hari: e.target.value } })}
+                              className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                            >
+                              <option value="" className="bg-[#1A1A2E]">Tidak ada jadwal</option>
+                              <option value="Senin" className="bg-[#1A1A2E]">Senin</option>
+                              <option value="Selasa" className="bg-[#1A1A2E]">Selasa</option>
+                              <option value="Rabu" className="bg-[#1A1A2E]">Rabu</option>
+                              <option value="Kamis" className="bg-[#1A1A2E]">Kamis</option>
+                              <option value="Jumat" className="bg-[#1A1A2E]">Jumat</option>
+                              <option value="Sabtu" className="bg-[#1A1A2E]">Sabtu</option>
+                              <option value="Minggu" className="bg-[#1A1A2E]">Minggu</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-white/70 text-sm">Jam Rilis (WIB)</label>
+                            <input
+                              type="time"
+                              value={formData.jadwalRilis?.jam || ''}
+                              onChange={(e) => setFormData({ ...formData, jadwalRilis: { ...formData.jadwalRilis, jam: e.target.value } })}
+                              className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                            />
+                          </div>
+                        </>
+                      )}
+                      <div>
+                        <label className="text-white/70 text-sm">Tipe</label>
+                        <select
+                          value={formData.type || 'TV'}
+                          onChange={(e) => setFormData({ ...formData, type: e.target.value as 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="TV" className="bg-[#1A1A2E]">TV Series</option>
+                          <option value="Movie" className="bg-[#1A1A2E]">Movie</option>
+                          <option value="OVA" className="bg-[#1A1A2E]">OVA</option>
+                          <option value="ONA" className="bg-[#1A1A2E]">ONA</option>
+                          <option value="Special" className="bg-[#1A1A2E]">Special</option>
+                          <option value="Music" className="bg-[#1A1A2E]">Music</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">MAL ID (Optional)</label>
+                        <input
+                          type="number"
+                          value={formData.malId || ''}
+                          onChange={(e) => setFormData({ ...formData, malId: e.target.value ? parseInt(e.target.value) : undefined })}
+                          placeholder="MyAnimeList ID"
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">TMDB ID (Optional)</label>
+                        <input
+                          type="number"
+                          value={formData.tmdbId || ''}
+                          onChange={(e) => setFormData({ ...formData, tmdbId: e.target.value ? parseInt(e.target.value) : undefined })}
+                          placeholder="TheMovieDB ID"
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-white/70 text-sm">Sinopsis</label>
+                        <textarea
+                          rows={3}
+                          value={formData.synopsis}
+                          onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">URL Trailer (YouTube/Direct)</label>
+                        <input
+                          type="text"
+                          placeholder="https://youtube.com/watch?v=... atau URL video langsung"
+                          value={formData.trailer}
+                          onChange={(e) => setFormData({ ...formData, trailer: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none placeholder-white/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Tipe Trailer</label>
+                        <select
+                          value={formData.trailerType}
+                          onChange={(e) => setFormData({ ...formData, trailerType: e.target.value as 'youtube' | 'direct' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="youtube" className="bg-[#1A1A2E]">YouTube</option>
+                          <option value="direct" className="bg-[#1A1A2E]">Direct Video (MP4)</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <Button onClick={handleAddAnime} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Simpan Anime</Button>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </DialogContent>
+                </Dialog>
 
-                {/* Site Name */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Nama Website
-                  </label>
-                  <input
-                    type="text"
-                    value={siteName}
-                    onChange={(e) => setSiteName(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
-                    placeholder="Nama website..."
-                  />
-                  <p className="text-xs text-white/40 mt-1">Nama akan muncul di header, footer, dan meta tag</p>
-                </div>
+                {/* Edit Anime Dialog */}
+                <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                  <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-33rem max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-white">Edit Anime</DialogTitle>
+                    </DialogHeader>
 
-                {/* Site Description */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Deskripsi Website
-                  </label>
-                  <textarea
-                    value={siteDescription}
-                    onChange={(e) => setSiteDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors resize-none"
-                    placeholder="Deskripsi singkat website..."
-                  />
-                  <p className="text-xs text-white/40 mt-1">Deskripsi untuk SEO dan meta tag</p>
-                </div>
-
-                {/* Site Email */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Email Kontak
-                  </label>
-                  <input
-                    type="email"
-                    value={siteEmail}
-                    onChange={(e) => setSiteEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
-                    placeholder="support@domain.com"
-                  />
-                  <p className="text-xs text-white/40 mt-1">Email yang ditampilkan di halaman kontak</p>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-4 border-t border-white/10">
-                  <button
-                    onClick={() => {
-                      setIsSavingSettings(true);
-                      // Save to localStorage
-                      localStorage.setItem('siteName', siteName);
-                      localStorage.setItem('siteDescription', siteDescription);
-                      localStorage.setItem('siteEmail', siteEmail);
-                      localStorage.setItem('siteLogo', siteLogo);
-                      
-                      // Broadcast site name update to other tabs
-                      if (typeof BroadcastChannel !== 'undefined') {
-                        const bc = new BroadcastChannel('site-settings');
-                        bc.postMessage({ type: 'siteNameUpdated', siteName });
-                        bc.close();
-                      }
-                      
-                      // Save to backend
-                      apiFetch(`${BACKEND_URL}/api/settings/siteName`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                        body: JSON.stringify({ value: siteName })
-                      }).catch(() => {});
-                      
-                      apiFetch(`${BACKEND_URL}/api/settings/siteDescription`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                        body: JSON.stringify({ value: siteDescription })
-                      }).catch(() => {});
-                      
-                      apiFetch(`${BACKEND_URL}/api/settings/siteEmail`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                        body: JSON.stringify({ value: siteEmail })
-                      }).catch(() => {});
-                      
-                      apiFetch(`${BACKEND_URL}/api/settings/siteLogo`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                        body: JSON.stringify({ value: siteLogo })
-                      }).catch(() => {});
-                      
-                      // Also save favicon (same as logo)
-                      apiFetch(`${BACKEND_URL}/api/settings/siteFavicon`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                        body: JSON.stringify({ value: siteLogo })
-                      }).catch(() => {});
-                      
-                      setTimeout(() => {
-                        setIsSavingSettings(false);
-                        toast({
-                          title: 'Berhasil!',
-                          description: 'Pengaturan berhasil disimpan',
-                          variant: 'success',
-                        });
-                      }, 500);
-                    }}
-                    disabled={isSavingSettings}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#6C5DD3] to-[#00C2FF] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {isSavingSettings ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Simpan Perubahan
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="col-span-2">
+                        <label className="text-white/70 text-sm">Judul Anime</label>
+                        <input
+                          type="text"
+                          value={editFormData.title}
+                          onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Studio</label>
+                        <input
+                          type="text"
+                          value={editFormData.studio}
+                          onChange={(e) => setEditFormData({ ...editFormData, studio: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Tahun Rilis</label>
+                        <input
+                          type="number"
+                          value={editFormData.releasedYear}
+                          onChange={(e) => setEditFormData({ ...editFormData, releasedYear: parseInt(e.target.value) })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Total Episode</label>
+                        <input
+                          type="number"
+                          value={editFormData.episodes}
+                          onChange={(e) => setEditFormData({ ...editFormData, episodes: parseInt(e.target.value) })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Rating</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          max="10"
+                          value={editFormData.rating}
+                          onChange={(e) => setEditFormData({ ...editFormData, rating: parseFloat(e.target.value) || 0 })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Status</label>
+                        <select
+                          value={editFormData.status}
+                          onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as 'Ongoing' | 'Completed' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="Ongoing" className="bg-[#1A1A2E]">Ongoing</option>
+                          <option value="Completed" className="bg-[#1A1A2E]">Completed</option>
+                        </select>
+                      </div>
+                      {/* Jadwal Rilis - Only show for Ongoing */}
+                      {editFormData.status === 'Ongoing' && (
+                        <>
+                          <div>
+                            <label className="text-white/70 text-sm">Hari Rilis</label>
+                            <select
+                              value={editFormData.jadwalRilis?.hari || ''}
+                              onChange={(e) => setEditFormData({ ...editFormData, jadwalRilis: { ...editFormData.jadwalRilis, hari: e.target.value } })}
+                              className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                            >
+                              <option value="" className="bg-[#1A1A2E]">Tidak ada jadwal</option>
+                              <option value="Senin" className="bg-[#1A1A2E]">Senin</option>
+                              <option value="Selasa" className="bg-[#1A1A2E]">Selasa</option>
+                              <option value="Rabu" className="bg-[#1A1A2E]">Rabu</option>
+                              <option value="Kamis" className="bg-[#1A1A2E]">Kamis</option>
+                              <option value="Jumat" className="bg-[#1A1A2E]">Jumat</option>
+                              <option value="Sabtu" className="bg-[#1A1A2E]">Sabtu</option>
+                              <option value="Minggu" className="bg-[#1A1A2E]">Minggu</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-white/70 text-sm">Jam Rilis (WIB)</label>
+                            <input
+                              type="time"
+                              value={editFormData.jadwalRilis?.jam || ''}
+                              onChange={(e) => setEditFormData({ ...editFormData, jadwalRilis: { ...editFormData.jadwalRilis, jam: e.target.value } })}
+                              className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                            />
+                          </div>
+                        </>
+                      )}
+                      <div>
+                        <label className="text-white/70 text-sm">Tipe</label>
+                        <select
+                          value={editFormData.type}
+                          onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value as 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="TV" className="bg-[#1A1A2E]">TV Series</option>
+                          <option value="Movie" className="bg-[#1A1A2E]">Movie</option>
+                          <option value="OVA" className="bg-[#1A1A2E]">OVA</option>
+                          <option value="ONA" className="bg-[#1A1A2E]">ONA</option>
+                          <option value="Special" className="bg-[#1A1A2E]">Special</option>
+                          <option value="Music" className="bg-[#1A1A2E]">Music</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-white/70 text-sm">URL Poster</label>
+                        <input
+                          type="text"
+                          value={editFormData.poster}
+                          onChange={(e) => setEditFormData({ ...editFormData, poster: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-white/70 text-sm">Sinopsis</label>
+                        <textarea
+                          rows={3}
+                          value={editFormData.synopsis}
+                          onChange={(e) => setEditFormData({ ...editFormData, synopsis: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">URL Trailer (YouTube/Direct)</label>
+                        <input
+                          type="text"
+                          placeholder="https://youtube.com/watch?v=... atau URL video langsung"
+                          value={editFormData.trailer}
+                          onChange={(e) => setEditFormData({ ...editFormData, trailer: e.target.value })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/70 text-sm">Tipe Trailer</label>
+                        <select
+                          value={editFormData.trailerType}
+                          onChange={(e) => setEditFormData({ ...editFormData, trailerType: e.target.value as 'youtube' | 'direct' })}
+                          className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6C5DD3] outline-none"
+                        >
+                          <option value="youtube" className="bg-[#1A1A2E]">YouTube</option>
+                          <option value="direct" className="bg-[#1A1A2E]">Direct Video (MP4)</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <Button onClick={handleUpdateAnime} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Update Anime</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
-            </div>
 
-            {/* Sidebar Widget Management */}
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center">
-                    <Settings className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Widget Sidebar</h2>
-                    <p className="text-sm text-white/50">Aktifkan/nonaktifkan dan atur urutan widget</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-2">
-                {sidebarWidgets.map((widget, index) => {
-                  // Icon mapping
-                  const iconMap: Record<string, any> = {
-                    random: Shuffle,
-                    stats: BarChart3,
-                    schedule: Calendar,
-                    topRating: Star,
-                    genres: Tag,
-                  };
-                  const WidgetIcon = iconMap[widget.id] || TrendingUp;
+              {/* Anime Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredAnime.map((anime) => {
+                  const episodeDataCount = anime.episodeData?.length || 0;
+                  const totalEpisodes = anime.episodes || 0;
 
                   return (
                     <motion.div
-                      key={widget.id}
-                      layout
-                      className={`flex items-center gap-4 p-4 rounded-xl transition-all ${widget.enabled
-                        ? 'bg-white/5 border border-white/10'
-                        : 'bg-white/[0.02] border border-white/5 opacity-60'
-                        }`}
+                      key={anime.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden group hover:border-[#6C5DD3]/30 transition-all hover:shadow-lg hover:shadow-[#6C5DD3]/10"
                     >
-                      {/* Drag Handle */}
-                      <div className="text-white/30">
-                        <GripVertical className="w-5 h-5" />
-                      </div>
-
-                      {/* Widget Icon */}
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${widget.enabled ? 'bg-[#6C5DD3]/20' : 'bg-white/5'
-                        }`}>
-                        <WidgetIcon className={`w-5 h-5 ${widget.enabled ? 'text-[#6C5DD3]' : 'text-white/30'}`} />
-                      </div>
-
-                      {/* Widget Name */}
-                      <div className="flex-1">
-                        <h3 className={`font-medium ${widget.enabled ? 'text-white' : 'text-white/50'}`}>
-                          {widget.name}
-                        </h3>
-                        <p className="text-xs text-white/40">
-                          Urutan: {index + 1}
-                        </p>
-                      </div>
-
-                      {/* Move Buttons */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => moveWidget(widget.id, 'up')}
-                          disabled={index === 0}
-                          className={`p-2 rounded-lg transition-colors ${index === 0
-                            ? 'text-white/10 cursor-not-allowed'
-                            : 'text-white/50 hover:text-white hover:bg-white/10'
-                            }`}
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => moveWidget(widget.id, 'down')}
-                          disabled={index === sidebarWidgets.length - 1}
-                          className={`p-2 rounded-lg transition-colors ${index === sidebarWidgets.length - 1
-                            ? 'text-white/10 cursor-not-allowed'
-                            : 'text-white/50 hover:text-white hover:bg-white/10'
-                            }`}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Toggle Switch */}
-                      <button
-                        onClick={() => toggleWidget(widget.id)}
-                        className={`relative w-12 h-7 rounded-full transition-colors ${widget.enabled ? 'bg-[#6C5DD3]' : 'bg-white/10'
-                          }`}
-                      >
-                        <motion.div
-                          layout
-                          className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${widget.enabled ? 'left-6' : 'left-1'
-                            }`}
+                      {/* Poster Section */}
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={anime.poster}
+                          alt={anime.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
                         />
-                      </button>
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A2E] via-transparent to-transparent" />
+
+                        {/* Status Badge */}
+                        <span className={`absolute top-3 left-3 px-2.5 py-1 text-xs font-medium rounded-lg ${anime.status === 'Ongoing'
+                          ? 'bg-green-500/90 text-white'
+                          : 'bg-blue-500/90 text-white'
+                          }`}>
+                          {anime.status}
+                        </span>
+
+                        {/* Rating Badge */}
+                        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg">
+                          <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                          <span className="text-white text-xs font-medium">{anime.rating}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEditAnime(anime)}
+                            className="p-2 bg-[#6C5DD3] hover:bg-[#5a4ec0] rounded-lg text-white transition-colors"
+                            title="Edit Anime"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedAnimeForEpisodes(anime);
+                              setActiveTab('episodes');
+                            }}
+                            className="p-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors"
+                            title="Kelola Episode"
+                          >
+                            <PlaySquare className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteAnime(anime.id)}
+                            className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-colors"
+                            title="Hapus Anime"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Info Section */}
+                      <div className="p-4">
+                        <h3 className="text-white font-semibold text-sm line-clamp-1 mb-1">{anime.title}</h3>
+                        <p className="text-white/40 text-xs mb-3">{anime.studio}</p>
+
+                        {/* Episode Stats */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg">
+                            <Film className="w-4 h-4 text-[#6C5DD3]" />
+                            <div className="text-xs">
+                              <span className="text-white font-medium">{totalEpisodes}</span>
+                              <span className="text-white/40"> episode</span>
+                            </div>
+                          </div>
+                          <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg ${episodeDataCount > 0 ? 'bg-green-500/10' : 'bg-white/5'
+                            }`}>
+                            <Download className="w-4 h-4 text-green-400" />
+                            <div className="text-xs">
+                              <span className={`font-medium ${episodeDataCount > 0 ? 'text-green-400' : 'text-white/40'}`}>
+                                {episodeDataCount}
+                              </span>
+                              <span className="text-white/40"> scraped</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Views */}
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 text-white/40">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{(anime.views || 0).toLocaleString()} views</span>
+                          </div>
+                          <span className="text-white/30">{anime.releasedYear}</span>
+                        </div>
+                      </div>
                     </motion.div>
                   );
                 })}
               </div>
 
-              {/* Info */}
-              <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
-                <p className="text-sm text-blue-300">
-                  💡 Perubahan akan langsung diterapkan di halaman Home. Refresh Home untuk melihat perubahan.
-                </p>
-              </div>
-            </div>
-
-            {/* Home Sections Management */}
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B6B] to-[#FF8E53] flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">Home Sections</h2>
-                    <p className="text-sm text-white/50">Tampilkan atau sembunyikan section di halaman Home</p>
-                  </div>
+              {/* Empty State */}
+              {filteredAnime.length === 0 && (
+                <div className="text-center py-20 bg-[#1A1A2E] rounded-2xl border border-white/5">
+                  <Film className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Tidak ada anime ditemukan</h3>
+                  <p className="text-white/50">Coba ubah kata kunci pencarian</p>
                 </div>
-              </div>
+              )}
+            </motion.div>
+          )}
 
-              <div className="p-4 space-y-2">
-                {homeSections.map((section, index) => {
-                  const iconMap: Record<string, any> = {
-                    trending: TrendingUp,
-                    continue: PlaySquare,
-                    foryou: Sparkles,
-                    ongoing: Film,
-                    latest: Search,
-                    explore: Shuffle,
-                    completed: CheckCircle2,
-                  };
-                  const SectionIcon = iconMap[section.id] || TrendingUp;
+          {/* Schedule Management */}
+          {activeTab === 'kelola-jadwal' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <AdminSchedule
+                animeList={animeList}
+                updateAnime={updateAnime}
+                showToast={showToast}
+              />
+            </motion.div>
+          )}
 
-                  return (
-                    <motion.div
-                      key={section.id}
-                      layout
-                      className={`flex items-center gap-4 p-4 rounded-xl transition-all ${section.enabled
-                        ? 'bg-white/5 border border-white/10'
-                        : 'bg-white/[0.02] border border-white/5 opacity-60'
-                        }`}
-                    >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${section.enabled ? 'bg-[#6C5DD3]/20' : 'bg-white/5'
-                        }`}>
-                        <SectionIcon className={`w-5 h-5 ${section.enabled ? 'text-[#6C5DD3]' : 'text-white/30'}`} />
-                      </div>
+          {/* Add Anime Interaction Tab (Jikan Integration) */}
+          {activeTab === 'add-anime' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Note: TMDB Auto-import disabled (requires API key). Use Jikan API below instead. */}
 
-                      <div className="flex-1">
-                        <h3 className={`font-medium ${section.enabled ? 'text-white' : 'text-white/50'}`}>
-                          {section.name}
-                        </h3>
-                        {section.description && (
-                          <p className="text-xs text-white/40">{section.description}</p>
-                        )}
-                      </div>
+              <h2 className="text-xl font-bold text-white mb-6">Tambah Anime Baru (via Jikan API)</h2>
 
-                      {/* Reorder Buttons */}
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => moveHomeSection(section.id, 'up')}
-                          disabled={index === 0}
-                          className={`p-1 rounded transition-colors ${index === 0
-                            ? 'text-white/10 cursor-not-allowed'
-                            : 'text-white/50 hover:text-white hover:bg-white/10'
-                            }`}
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => moveHomeSection(section.id, 'down')}
-                          disabled={index === homeSections.length - 1}
-                          className={`p-1 rounded transition-colors ${index === homeSections.length - 1
-                            ? 'text-white/10 cursor-not-allowed'
-                            : 'text-white/50 hover:text-white hover:bg-white/10'
-                            }`}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => toggleHomeSection(section.id)}
-                        className={`relative w-12 h-7 rounded-full transition-colors ${section.enabled ? 'bg-[#6C5DD3]' : 'bg-white/10'
-                          }`}
-                      >
-                        <motion.div
-                          layout
-                          className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${section.enabled ? 'left-6' : 'left-1'
-                            }`}
-                        />
-                      </button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
-                <p className="text-sm text-blue-300">
-                  💡 Home akan mengikuti pengaturan ini secara otomatis.
-                </p>
-              </div>
-            </div>
-
-            {/* Reset Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  const defaults = [
-                    { id: 'random', name: 'Tombol Anime Random', enabled: true, order: 0 },
-                    { id: 'stats', name: 'Statistik User', enabled: true, order: 1 },
-                    { id: 'schedule', name: 'Jadwal Rilis', enabled: true, order: 2 },
-                    { id: 'topRating', name: 'Top Rating', enabled: true, order: 3 },
-                    { id: 'genres', name: 'Genre Populer', enabled: true, order: 4 },
-                  ];
-                  saveSidebarWidgets(defaults);
-                  showToast('Widget direset ke default!', 'success');
-                }}
-                variant="outline"
-                className="border-white/10 text-white/70 hover:bg-white/5"
-              >
-                Reset ke Default
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Generate Subtitle Tab */}
-        {activeTab === 'generate-sub' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Captions className="w-5 h-5 text-[#6C5DD3]" />
-                  AI Subtitle Generator
-                </h2>
-                <p className="text-white/50 text-sm mt-1">Generate subtitle otomatis menggunakan AI Speech-to-Text</p>
-              </div>
-
-              {/* Settings */}
-              <div className="p-6 border-b border-white/5 bg-white/[0.02]">
-                <h3 className="text-white font-medium mb-4">Pengaturan</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-white/60 text-sm block mb-2">Provider</label>
-                    <select
-                      value={subtitleProvider}
-                      onChange={(e) => setSubtitleProvider(e.target.value as 'openai' | 'local')}
-                      className="w-full px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#6C5DD3]"
-                    >
-                      <option value="openai">OpenAI Whisper API (~$0.006/menit)</option>
-                      <option value="local">Local Whisper (Gratis, lebih lambat)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-white/60 text-sm block mb-2">Bahasa Output</label>
-                    <select
-                      value={subtitleLanguage || 'auto'}
-                      onChange={(e) => setSubtitleLanguage(e.target.value === 'auto' ? null : e.target.value)}
-                      className="w-full px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#6C5DD3]"
-                    >
-                      <option value="auto">Auto Detect</option>
-                      <option value="ja">Jepang (Original)</option>
-                      <option value="id">Indonesia (Translate)</option>
-                      <option value="en">English (Translate)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-end">
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-sm">
-                      💡 Hanya episode dengan video direct yang bisa di-generate
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Anime List */}
-              <div className="p-6">
-                <h3 className="text-white font-medium mb-4">Pilih Anime</h3>
-
-                {/* Search */}
-                <div className="relative mb-4">
+              <div className="flex gap-4 mb-8">
+                <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
                     type="text"
-                    placeholder="Cari anime..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
+                    placeholder="Cari judul anime di MyAnimeList (Jikan)..."
+                    className="w-full pl-12 pr-4 py-4 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3] text-lg"
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        const query = e.currentTarget.value;
+                        if (!query) return;
+                        try {
+                          setApiSearchResults([]);
+                          const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=12`);
+                          const data = await res.json();
+                          setApiSearchResults(data.data || []);
+                        } catch (err) {
+                          logger.error('Jikan Error:', err);
+                        }
+                      }
+                    }}
                   />
                 </div>
+                <Button className="h-full py-4 px-8 bg-[#6C5DD3] hover:bg-[#5a4ec0]">Cari</Button>
+              </div>
 
-                {/* Anime Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {filteredAnime
-                    .filter(anime => anime.episodeData?.some((ep: any) => ep.streams?.some((s: any) => s.type === 'direct')))
-                    .map((anime, idx) => {
-                      const episodesWithDirect = anime.episodeData?.filter((ep: any) =>
-                        ep.streams?.some((s: any) => s.type === 'direct')
-                      ).length || 0;
-                      const episodesWithSub = anime.episodeData?.filter((ep: any) => ep.subtitle?.url).length || 0;
+              {/* Results Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {apiSearchResults.map((anime: any, index: number) => (
+                  <div key={`${anime.mal_id}-${index}`} className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden hover:border-[#6C5DD3] transition-colors group relative">
+                    <div className="aspect-[2/3] relative">
+                      <img
+                        src={anime.images?.jpg?.large_image_url}
+                        alt={anime.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+                        <Button
+                          onClick={async () => {
+                            // Generate readable ID (slug)
+                            const slug = anime.title
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]+/g, '-')
+                              .replace(/^-|-$/g, '');
+                            const customId = `${slug}-${anime.mal_id}`;
+
+                            // Fetch TMDB ID from Jikan external links
+                            let tmdbId: number | undefined;
+                            try {
+                              const extRes = await fetch(`https://api.jikan.moe/v4/anime/${anime.mal_id}/external`);
+                              const extData = await extRes.json();
+                              const tmdbLink = extData.data?.find((link: any) => link.name === 'TheMovieDB');
+                              if (tmdbLink?.url) {
+                                // Extract TMDB ID from URL like: https://themoviedb.org/tv/12345
+                                const match = tmdbLink.url.match(/\/tv\/(\d+)/);
+                                if (match) tmdbId = parseInt(match[1]);
+                              }
+                            } catch (e) {
+                              logger.warn('Failed to fetch TMDB ID:', e);
+                            }
+
+                            // Map Jikan type to our type enum
+                            const typeMapping: Record<string, 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music'> = {
+                              'TV': 'TV',
+                              'Movie': 'Movie',
+                              'OVA': 'OVA',
+                              'ONA': 'ONA',
+                              'Special': 'Special',
+                              'Music': 'Music',
+                            };
+                            const animeType = typeMapping[anime.type] || 'TV';
+
+                            // Auto-translate synopsis to Indonesian
+                            let translatedSynopsis = anime.synopsis || '';
+                            if (anime.synopsis && anime.synopsis.trim()) {
+                              try {
+                                logger.log('[Admin/Jikan] Translating synopsis to Indonesian...');
+                                const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ text: anime.synopsis, targetLang: 'id' })
+                                });
+                                const translateData = await translateRes.json();
+                                if (translateData.translated) {
+                                  translatedSynopsis = translateData.translated;
+                                  logger.log('[Admin/Jikan] Synopsis translated successfully');
+                                }
+                              } catch (translateError) {
+                                logger.error('[Admin/Jikan] Translation failed:', translateError);
+                              }
+                            }
+
+                            const newAnime = {
+                              id: customId,
+                              title: anime.title,
+                              studio: anime.studios?.[0]?.name || 'Unknown',
+                              releasedYear: anime.year || new Date(anime.aired?.from).getFullYear() || 0,
+                              episodes: anime.episodes || 0,
+                              rating: anime.score || 0,
+                              status: (anime.status === 'Finished Airing' ? 'Completed' : 'Ongoing') as 'Ongoing' | 'Completed',
+                              type: animeType,
+                              synopsis: translatedSynopsis,
+                              poster: anime.images?.jpg?.large_image_url,
+                              genres: anime.genres?.map((g: any) => g.name) || [],
+                              malId: anime.mal_id, // Save MAL ID for Smashy Stream
+                              tmdbId, // Save TMDB ID for Smashy Stream /tv endpoint
+                            };
+                            // Call Add Anime
+                            addAnime(newAnime);
+                            // Feedback with modern toast
+                            showToast(`Berhasil menambahkan: ${anime.title}${tmdbId ? ` (TMDB: ${tmdbId})` : ''}`, 'success');
+                          }}
+                          className="w-full bg-[#6C5DD3]"
+                        >
+                          + Tambahkan
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-white font-medium line-clamp-1" title={anime.title}>{anime.title}</h3>
+                      <div className="flex items-center justify-between mt-2 text-xs text-white/50">
+                        <span>{anime.type || 'TV'}</span>
+                        <span className="flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400 fill-current" /> {anime.score || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {apiSearchResults.length === 0 && (
+                <div className="text-center py-20 text-white/30">
+                  <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p>Ketik judul anime dan tekan Enter untuk mencari</p>
+                </div>
+              )}
+
+            </motion.div>
+          )}
+
+          {/* Manage Episodes Content */}
+          {activeTab === 'episodes' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+
+              {/* Show anime grid when no anime selected */}
+              {!selectedAnimeForEpisodes ? (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Kelola Episode</h2>
+                      <p className="text-white/50 text-sm mt-1">Pilih anime untuk mengelola episode</p>
+                    </div>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative mb-6">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                    <input
+                      type="text"
+                      placeholder="Cari anime..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-[#1A1A2E] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
+                    />
+                  </div>
+
+                  {/* Anime Cards Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {filteredAnime.map((anime, idx) => {
+                      const episodeDataCount = anime.episodeData?.length || 0;
+                      const totalEpisodes = anime.episodes || 0;
 
                       return (
                         <motion.div
                           key={anime.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
+                          initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.02 }}
-                          className="bg-[#0F0F1A] border border-white/10 rounded-xl overflow-hidden hover:border-[#6C5DD3]/50 transition-all"
+                          onClick={() => setSelectedAnimeForEpisodes(anime)}
+                          className="bg-[#1A1A2E] border border-white/5 rounded-xl overflow-hidden cursor-pointer group hover:border-[#6C5DD3]/50 transition-all hover:scale-105"
                         >
+                          {/* Poster */}
                           <div className="relative aspect-[2/3]">
                             <img
                               src={anime.poster}
@@ -3456,186 +2155,1049 @@ export default function Admin() {
                               className="w-full h-full object-cover"
                               loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
-                            {/* Stats */}
-                            <div className="absolute bottom-2 left-2 right-2 space-y-1">
-                              <div className="flex items-center gap-1 text-xs">
-                                <span className="px-1.5 py-0.5 bg-green-500/80 text-white rounded">{episodesWithDirect} Direct</span>
-                                <span className={`px-1.5 py-0.5 rounded ${episodesWithSub > 0 ? 'bg-blue-500/80' : 'bg-white/20'} text-white`}>
-                                  {episodesWithSub} CC
-                                </span>
+                            {/* Episode Count Badge */}
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <div className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium ${episodeDataCount > 0
+                                ? 'bg-green-500/90 text-white'
+                                : 'bg-black/60 backdrop-blur-sm text-white/80'
+                                }`}>
+                                <PlaySquare className="w-3.5 h-3.5" />
+                                <span>{episodeDataCount}/{totalEpisodes} Episode</span>
+                              </div>
+                            </div>
+
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-[#6C5DD3]/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="text-center text-white">
+                                <Settings className="w-8 h-8 mx-auto mb-2" />
+                                <span className="text-sm font-medium">Kelola Episode</span>
                               </div>
                             </div>
                           </div>
 
+                          {/* Title */}
                           <div className="p-3">
-                            <h4 className="text-white text-sm font-medium line-clamp-2 mb-2">{anime.title}</h4>
-                            <Button
-                              onClick={() => setSelectedAnimeForEpisodes(anime)}
-                              size="sm"
-                              className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0] text-xs"
-                            >
-                              <Captions className="w-3 h-3 mr-1" /> Generate Sub
-                            </Button>
+                            <h3 className="text-white text-sm font-medium line-clamp-2">{anime.title}</h3>
                           </div>
                         </motion.div>
                       );
                     })}
-                </div>
-
-                {filteredAnime.filter(anime => anime.episodeData?.some((ep: any) => ep.streams?.some((s: any) => s.type === 'direct'))).length === 0 && (
-                  <div className="text-center py-16 bg-white/5 rounded-xl border border-white/5">
-                    <Captions className="w-12 h-12 mx-auto mb-3 text-white/20" />
-                    <h3 className="text-white font-medium mb-1">Tidak ada anime dengan video direct</h3>
-                    <p className="text-white/40 text-sm">Upload video episode terlebih dahulu di Kelola Episode</p>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Selected Anime Episodes */}
-            {selectedAnimeForEpisodes && (
-              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={selectedAnimeForEpisodes.poster}
-                      alt=""
-                      className="w-16 h-20 object-cover rounded-lg"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h3 className="text-white font-bold">{selectedAnimeForEpisodes.title}</h3>
-                      <p className="text-white/50 text-sm">{selectedAnimeForEpisodes.studio} • {selectedAnimeForEpisodes.releasedYear}</p>
+                  {/* Empty State */}
+                  {filteredAnime.length === 0 && (
+                    <div className="text-center py-20 bg-[#1A1A2E] rounded-2xl border border-white/5">
+                      <Film className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                      <h3 className="text-xl font-semibold text-white mb-2">Tidak ada anime ditemukan</h3>
+                      <p className="text-white/50">Coba ubah kata kunci pencarian</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Episode Management for Selected Anime */}
+                  <div className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden">
+                    {/* Header with Anime Info */}
+                    <div className="flex items-start gap-4 p-6 border-b border-white/5">
+                      <img
+                        src={selectedAnimeForEpisodes.poster}
+                        alt={selectedAnimeForEpisodes.title}
+                        className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
+                        loading="lazy"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h2 className="text-xl font-bold text-white line-clamp-1">{selectedAnimeForEpisodes.title}</h2>
+                            <p className="text-white/50 text-sm mt-1">{selectedAnimeForEpisodes.studio} • {selectedAnimeForEpisodes.releasedYear}</p>
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className={`px-2 py-1 text-xs rounded-lg ${selectedAnimeForEpisodes.status === 'Ongoing'
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                {selectedAnimeForEpisodes.status}
+                              </span>
+                              <span className="text-white/40 text-sm">
+                                {selectedAnimeForEpisodes.episodeData?.length || 0}/{selectedAnimeForEpisodes.episodes || 0} Episode Scraped
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => setSelectedAnimeForEpisodes(null)}
+                            variant="ghost"
+                            className="text-white/50 hover:text-white hover:bg-white/10"
+                          >
+                            ← Kembali
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Auto Scrape Button */}
+                        <Button
+                          onClick={() => {
+                            setScrapeUrl(''); // Clear URL for auto-search
+                            handleScrapeEpisodes();
+                          }}
+                          disabled={isScraping}
+                          className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {isScraping ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping...</>
+                          ) : (
+                            <><Download className="w-4 h-4 mr-2" /> Scrape Otomatis</>
+                          )}
+                        </Button>
+
+                        {/* Manual Episode Button */}
+                        <Button onClick={createNewEpisode} className="bg-[#6C5DD3] hover:bg-[#5a4ec0]">
+                          <Plus className="w-4 h-4 mr-2" /> Tambah Episode Manual
+                        </Button>
+
+                        {/* Generate All Thumbnails Button */}
+                        <Button
+                          onClick={async () => {
+                            try {
+                              toast({ title: 'Generating...', description: 'Membuat thumbnail untuk semua episode', variant: 'default' });
+                              const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/thumbnails/all`, {
+                                method: 'POST',
+                              });
+                              if (!res.ok) {
+                                const errData = await res.json().catch(() => ({}));
+                                throw new Error(errData.error || `HTTP ${res.status}`);
+                              }
+                              const data = await res.json();
+                              toast({
+                                title: 'Selesai!',
+                                description: `${data.summary.generated} generated, ${data.summary.skipped} skipped, ${data.summary.failed} failed`,
+                                variant: 'success'
+                              });
+                              // Refresh anime data
+                              const animeRes = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
+                              if (animeRes.ok) {
+                                const refreshedAnime = await animeRes.json();
+                                setSelectedAnimeForEpisodes(refreshedAnime);
+                                updateAnime(refreshedAnime.id, refreshedAnime);
+                              }
+                            } catch (err: any) {
+                              toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                            }
+                          }}
+                          variant="outline"
+                          className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                        >
+                          <Camera className="w-4 h-4 mr-2" /> Generate All Thumbnails
+                        </Button>
+                      </div>
+
+                      {/* Manual URL Scrape Section */}
+                      <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <label className="text-white/70 text-sm mb-2 block">Atau scrape dari URL spesifik:</label>
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={scrapeUrl}
+                            onChange={(e) => setScrapeUrl(e.target.value)}
+                            placeholder="https://nontonanimeid.boats/anime/... atau https://otakudesu.cloud/anime/..."
+                            className="flex-1 px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#6C5DD3] text-sm"
+                          />
+                          <Button
+                            onClick={handleScrapeEpisodes}
+                            disabled={isScraping || !scrapeUrl}
+                            className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50"
+                          >
+                            <Download className="w-4 h-4 mr-2" /> Scrape URL
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subtitle Generation Section */}
+                    <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                      <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                        <span className="text-lg">🎬</span> AI Subtitle Generation
+                      </h4>
+                      <div className="flex flex-wrap items-end gap-3">
+                        <div>
+                          <label className="text-white/50 text-xs block mb-1">Provider</label>
+                          <select
+                            value={subtitleProvider}
+                            onChange={(e) => setSubtitleProvider(e.target.value as 'openai' | 'local')}
+                            className="px-3 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#6C5DD3]"
+                          >
+                            <option value="openai">OpenAI Whisper API (~$0.006/menit)</option>
+                            <option value="local">Local Whisper (Gratis, lebih lambat)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-white/50 text-xs block mb-1">Bahasa</label>
+                          <select
+                            value={subtitleLanguage || 'auto'}
+                            onChange={(e) => setSubtitleLanguage(e.target.value === 'auto' ? null : e.target.value)}
+                            className="px-3 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#6C5DD3]"
+                          >
+                            <option value="auto">Auto Detect</option>
+                            <option value="ja">Jepang (Original)</option>
+                            <option value="id">Indonesia (Translate)</option>
+                            <option value="en">English (Translate)</option>
+                          </select>
+                        </div>
+                        <p className="text-white/40 text-xs">
+                          Klik tombol 🎬 pada episode untuk generate subtitle otomatis
+                        </p>
+
+                        {/* Progress Indicator */}
+                        {isGeneratingSubtitle && (
+                          <div className="mt-4 p-4 bg-gradient-to-r from-[#6C5DD3]/20 to-blue-600/20 rounded-xl border border-[#6C5DD3]/30">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-[#6C5DD3]/30 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-[#6C5DD3] animate-spin" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-white">
+                                  Episode {generatingEpisode} - Generating Subtitle
+                                </div>
+                                <div className="text-xs text-[#00C2FF] mt-0.5">
+                                  {subtitleProgress || 'Mempersiapkan...'}
+                                </div>
+                                <div className="text-[10px] text-white/40 mt-1">
+                                  ⏱️ Model large-v3: ~30-60 menit untuk video 24 menit (CPU)
+                                </div>
+                              </div>
+                            </div>
+                            {/* Animated Progress Bar */}
+                            <div className="mt-3 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#00C2FF] rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Episode Cards Grid */}
+                    <div className="p-6">
+                      <h3 className="text-white font-semibold mb-4">Daftar Episode ({selectedAnimeForEpisodes.episodeData?.length || 0})</h3>
+
+                      {selectedAnimeForEpisodes.episodeData && selectedAnimeForEpisodes.episodeData.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                          {[...selectedAnimeForEpisodes.episodeData]
+                            .sort((a: any, b: any) => a.ep - b.ep)
+                            .map((ep: any, idx: number) => {
+                              const hasDirectStream = ep.streams?.some((s: any) => s.type === 'direct');
+                              const hasSubtitle = !!ep.subtitle?.url;
+
+                              return (
+                                <motion.div
+                                  key={idx}
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: idx * 0.01 }}
+                                  className={`relative group p-3 rounded-lg border text-center transition-all ${ep.streams?.length > 0
+                                    ? 'bg-green-500/10 border-green-500/30 hover:border-green-500'
+                                    : 'bg-white/5 border-white/10 hover:border-white/30'
+                                    }`}
+                                >
+                                  {/* Episode Number */}
+                                  <div className={`text-xl font-bold ${ep.streams?.length > 0 ? 'text-green-400' : 'text-white/60'}`}>
+                                    {ep.ep}
+                                  </div>
+
+                                  {/* Stream Count */}
+                                  <div className={`text-[10px] mt-1 ${ep.streams?.length > 0 ? 'text-green-400/70' : 'text-white/30'}`}>
+                                    {ep.streams?.length || 0} stream
+                                  </div>
+
+                                  {/* Subtitle Status Badge */}
+                                  {hasSubtitle && (
+                                    <div className="absolute top-1 right-1 px-1 py-0.5 bg-blue-500/90 text-white text-[8px] rounded font-medium">
+                                      CC
+                                    </div>
+                                  )}
+
+                                  {/* Action Buttons on Hover */}
+                                  <div className="absolute inset-0 bg-black/80 rounded-lg flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openEpisodeEdit(ep); }}
+                                      className="p-1.5 bg-[#6C5DD3] hover:bg-[#5a4ec0] rounded text-white transition-colors"
+                                      title="Edit Episode"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    {hasDirectStream && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleGenerateSubtitle(ep.ep);
+                                        }}
+                                        disabled={isGeneratingSubtitle}
+                                        className={`p-1.5 rounded text-white transition-all ${isGeneratingSubtitle && generatingEpisode === ep.ep
+                                          ? 'bg-gradient-to-r from-[#6C5DD3] to-blue-600 animate-pulse shadow-lg shadow-[#6C5DD3]/50'
+                                          : hasSubtitle
+                                            ? 'bg-blue-600 hover:bg-blue-700'
+                                            : 'bg-orange-600 hover:bg-orange-700'
+                                          } ${isGeneratingSubtitle && generatingEpisode !== ep.ep ? 'opacity-30' : ''}`}
+                                        title={
+                                          isGeneratingSubtitle && generatingEpisode === ep.ep
+                                            ? `⏳ ${subtitleProgress || 'Processing...'}`
+                                            : hasSubtitle ? 'Regenerate Subtitle' : 'Generate Subtitle'
+                                        }
+                                      >
+                                        {isGeneratingSubtitle && generatingEpisode === ep.ep ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <span className="text-xs">{hasSubtitle ? '🔄' : '🎬'}</span>
+                                        )}
+                                      </button>
+                                    )}
+
+                                    {/* Delete Subtitle Button */}
+                                    {hasSubtitle && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteSubtitle(ep.ep);
+                                        }}
+                                        disabled={isGeneratingSubtitle}
+                                        className="p-1.5 bg-red-600 hover:bg-red-700 rounded text-white transition-colors disabled:opacity-30"
+                                        title="Hapus Subtitle"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              );
+                            })
+                          }
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 bg-white/5 rounded-xl border border-white/5">
+                          <PlaySquare className="w-12 h-12 mx-auto mb-3 text-white/20" />
+                          <h3 className="text-white font-medium mb-1">Belum ada episode</h3>
+                          <p className="text-white/40 text-sm">Klik "Scrape Otomatis" atau tambah episode manual</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <Button variant="ghost" onClick={() => setSelectedAnimeForEpisodes(null)} className="text-white/50 hover:text-white">
-                    ← Kembali
-                  </Button>
-                </div>
 
-                <div className="p-6">
-                  <h4 className="text-white font-medium mb-4">Episode dengan Video Direct</h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-                    {selectedAnimeForEpisodes.episodeData
-                      ?.filter((ep: any) => ep.streams?.some((s: any) => s.type === 'direct'))
-                      .sort((a: any, b: any) => a.ep - b.ep)
-                      .map((ep: any) => {
-                        const hasSubtitle = !!ep.subtitle?.url;
+                  {/* Batch Upload Section */}
+                  <div className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden mt-6">
+                    <div className="p-6 border-b border-white/5">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <CloudUpload className="w-5 h-5 text-[#6C5DD3]" />
+                        Batch Upload Episode
+                      </h3>
+                      <p className="text-white/40 text-sm mt-1">Upload banyak episode sekaligus ke R2 Cloud</p>
+                    </div>
 
-                        return (
-                          <div
-                            key={ep.ep}
-                            className={`relative p-4 rounded-xl border text-center ${hasSubtitle
-                              ? 'bg-blue-500/10 border-blue-500/30'
-                              : 'bg-green-500/10 border-green-500/30'
-                              }`}
-                          >
-                            <div className="text-2xl font-bold text-white mb-1">{ep.ep}</div>
-                            <div className="text-xs text-white/50 mb-2">
-                              {hasSubtitle ? 'CC Ready' : 'No Sub'}
+                    <div className="p-6 space-y-4">
+                      {/* Quality Selection */}
+                      <div className="flex items-center gap-4">
+                        <label className="text-white/70 text-sm">Kualitas untuk semua file:</label>
+                        <select
+                          value={batchQuality}
+                          onChange={(e) => setBatchQuality(e.target.value)}
+                          disabled={isBatchUploading}
+                          className="px-4 py-2 bg-[#1A1A2E] border border-white/10 rounded-xl text-white text-sm focus:border-[#6C5DD3] outline-none appearance-none cursor-pointer"
+                          style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            paddingRight: '36px'
+                          }}
+                        >
+                          <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                          <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                          <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
+                        </select>
+                      </div>
+
+                      {/* Drop Zone */}
+                      {batchFiles.length === 0 ? (
+                        <div className="relative border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-[#6C5DD3]/50 transition-colors">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            multiple
+                            onChange={(e) => handleBatchFileSelect(e.target.files)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload className="w-12 h-12 mx-auto mb-4 text-white/30" />
+                          <p className="text-white/70 font-medium">Drop file video di sini atau klik untuk memilih</p>
+                          <p className="text-white/40 text-sm mt-1">Support multiple files (MP4, MKV, dll)</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* File List */}
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                            {batchFiles.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex items-center gap-3 p-3 rounded-xl border ${item.status === 'complete' ? 'bg-green-500/10 border-green-500/30' :
+                                  item.status === 'error' ? 'bg-red-500/10 border-red-500/30' :
+                                    item.status === 'uploading' ? 'bg-[#6C5DD3]/10 border-[#6C5DD3]/30' :
+                                      'bg-white/5 border-white/10'
+                                  }`}
+                              >
+                                {/* Episode Number Input */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className="text-white/50 text-xs">Ep</span>
+                                  <input
+                                    type="number"
+                                    value={item.episodeNumber}
+                                    onChange={(e) => updateBatchEpisodeNumber(idx, parseInt(e.target.value) || 1)}
+                                    disabled={isBatchUploading || item.status === 'complete'}
+                                    className="w-14 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-center text-sm focus:border-[#6C5DD3] outline-none"
+                                  />
+                                </div>
+
+                                {/* File Name */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-sm truncate">{item.file.name}</p>
+                                  <p className="text-white/40 text-xs">{(item.file.size / 1024 / 1024).toFixed(1)} MB</p>
+                                </div>
+
+                                {/* Status */}
+                                <div className="flex-shrink-0 w-20">
+                                  {item.status === 'pending' && (
+                                    <span className="text-white/50 text-xs">Menunggu</span>
+                                  )}
+                                  {item.status === 'uploading' && (
+                                    <div className="flex items-center gap-2">
+                                      <Loader2 className="w-4 h-4 text-[#6C5DD3] animate-spin" />
+                                      <span className="text-[#6C5DD3] text-xs">{item.progress}%</span>
+                                    </div>
+                                  )}
+                                  {item.status === 'complete' && (
+                                    <span className="text-green-400 text-xs flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Selesai
+                                    </span>
+                                  )}
+                                  {item.status === 'error' && (
+                                    <span className="text-red-400 text-xs">Error</span>
+                                  )}
+                                </div>
+
+                                {/* Remove Button */}
+                                {!isBatchUploading && item.status !== 'complete' && (
+                                  <button
+                                    onClick={() => removeBatchFile(idx)}
+                                    className="text-white/30 hover:text-red-400 p-1"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Progress Summary */}
+                          {isBatchUploading && (
+                            <div className="bg-white/5 rounded-xl p-4">
+                              <div className="flex justify-between text-sm mb-2">
+                                <span className="text-white/70">Progress Upload</span>
+                                <span className="text-white">{batchFiles.filter(f => f.status === 'complete').length}/{batchFiles.length}</span>
+                              </div>
+                              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#8B7FD3] transition-all"
+                                  style={{ width: `${(batchFiles.filter(f => f.status === 'complete').length / batchFiles.length) * 100}%` }}
+                                />
+                              </div>
                             </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-3">
                             <Button
-                              onClick={() => handleGenerateSubtitle(ep.ep)}
-                              disabled={isGeneratingSubtitle}
-                              size="sm"
-                              className={`w-full text-xs ${hasSubtitle
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-orange-600 hover:bg-orange-700'
-                                }`}
+                              onClick={handleBatchUpload}
+                              disabled={isBatchUploading || batchFiles.every(f => f.status === 'complete')}
+                              className="flex-1 bg-[#6C5DD3] hover:bg-[#5a4ec0] disabled:opacity-50"
                             >
-                              {isGeneratingSubtitle && generatingEpisode === ep.ep ? (
-                                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing</>
+                              {isBatchUploading ? (
+                                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Mengupload...</>
                               ) : (
-                                <>{hasSubtitle ? 'Regenerate' : 'Generate'}</>
+                                <><Upload className="w-4 h-4 mr-2" /> Mulai Upload ({batchFiles.filter(f => f.status === 'pending').length} file)</>
                               )}
                             </Button>
+                            <Button
+                              onClick={clearBatchFiles}
+                              disabled={isBatchUploading}
+                              variant="outline"
+                              className="border-white/20 text-white hover:bg-white/10"
+                            >
+                              <X className="w-4 h-4 mr-2" /> Clear
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
-                            {hasSubtitle && (
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                <Check className="w-3 h-3 text-white" />
+              {/* Edit Episode Modal */}
+              <Dialog open={isEpisodeModalOpen} onOpenChange={setIsEpisodeModalOpen}>
+                <DialogContent className="bg-[#1A1A2E] border-white/10 max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+                  <DialogHeader className="flex-shrink-0">
+                    <DialogTitle className="text-white">Edit Episode {episodeToEdit?.ep}</DialogTitle>
+                  </DialogHeader>
+
+                  {episodeToEdit && (
+                    <div className="space-y-6 mt-4 flex-1 overflow-y-auto pr-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-white/70 text-sm">Nomor Episode</label>
+                          <input type="number" value={episodeToEdit.ep} onChange={(e) => setEpisodeToEdit({ ...episodeToEdit, ep: parseInt(e.target.value) })} className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-[#6C5DD3]" />
+                        </div>
+                        <div>
+                          <label className="text-white/70 text-sm">Judul Episode</label>
+                          <input type="text" value={episodeToEdit.title} onChange={(e) => setEpisodeToEdit({ ...episodeToEdit, title: e.target.value })} className="w-full mt-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-[#6C5DD3]" />
+                        </div>
+                      </div>
+
+                      {/* Upload Video Section */}
+                      <div className="border-t border-white/10 pt-4">
+                        <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+                          <CloudUpload className="w-5 h-5 text-[#6C5DD3]" />
+                          Upload Video ke Cloud
+                        </h4>
+
+                        <div className="bg-white/5 p-4 rounded-xl">
+                          {/* File Input Row */}
+                          <div className="mb-3">
+                            <label className="text-xs text-white/50 mb-1 block">File Video</label>
+                            <div className="relative">
+                              <input
+                                type="file"
+                                accept="video/*"
+                                onChange={(e) => e.target.files?.[0] && setUploadFile(e.target.files[0])}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div className={`w-full px-4 py-3 rounded-xl border border-dashed flex items-center gap-3 ${uploadFile ? 'border-green-500/50 bg-green-500/5' : 'border-white/20 bg-[#1A1A2E]'}`}>
+                                {uploadFile ? (
+                                  <>
+                                    <Film className="w-5 h-5 text-green-500 flex-shrink-0" />
+                                    <span className="text-white text-sm truncate flex-1 min-w-0">{uploadFile.name}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); setUploadFile(null); }} className="text-white/50 hover:text-white flex-shrink-0">
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-5 h-5 text-white/40 flex-shrink-0" />
+                                    <span className="text-white/40 text-sm">Pilih atau drop file video...</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quality & Upload Row */}
+                          <div className="flex gap-3 items-end">
+                            <div className="w-24 flex-shrink-0">
+                              <label className="text-xs text-white/50 mb-1 block">Kualitas</label>
+                              <select
+                                value={uploadQuality}
+                                onChange={(e) => setUploadQuality(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-[#1A1A2E] rounded-xl border border-white/10 text-white text-sm appearance-none cursor-pointer"
+                                style={{
+                                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundPosition: 'right 12px center',
+                                  paddingRight: '36px'
+                                }}
+                              >
+                                <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                                <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                                <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
+                              </select>
+                            </div>
+
+                            {/* Upload Button */}
+                            <Button
+                              onClick={handleUploadVideo}
+                              disabled={!uploadFile || isUploading}
+                              className={`flex-1 ${!uploadFile || isUploading ? 'bg-white/10' : 'bg-[#6C5DD3] hover:bg-[#5a4ec0]'}`}
+                            >
+                              {isUploading ? (
+                                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Mengupload...</>
+                              ) : (
+                                <><Upload className="w-4 h-4 mr-2" /> Upload ke Cloud</>
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Progress Bar */}
+                          {isUploading && (
+                            <div className="mt-4">
+                              <div className="flex justify-between text-xs text-white/50 mb-1">
+                                <span>Uploading...</span>
+                                <span>{uploadProgress}%</span>
+                              </div>
+                              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#6C5DD3] to-[#8B7FD3] transition-all"
+                                  style={{ width: `${uploadProgress}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-white/10 pt-4">
+                        <h4 className="text-white font-medium mb-4">Link Stream Manual</h4>
+
+                        {/* Add Stream Form */}
+                        <div className="bg-white/5 p-4 rounded-xl mb-4 grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                          <div className="md:col-span-3">
+                            <label className="text-xs text-white/50 mb-1 block">Server Name</label>
+                            <input type="text" placeholder="e.g. Google Drive" value={streamServer} onChange={(e) => setStreamServer(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm" />
+                          </div>
+                          <div className="md:col-span-4">
+                            <label className="text-xs text-white/50 mb-1 block">URL</label>
+                            <input type="text" placeholder="https://..." value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm" />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-xs text-white/50 mb-1 block">Quality</label>
+                            <select
+                              value={streamQuality}
+                              onChange={(e) => setStreamQuality(e.target.value)}
+                              className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm appearance-none cursor-pointer"
+                              style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'right 10px center',
+                                paddingRight: '32px'
+                              }}
+                            >
+                              <option value="1080p" className="bg-[#1A1A2E] text-white">1080p</option>
+                              <option value="720p" className="bg-[#1A1A2E] text-white">720p</option>
+                              <option value="480p" className="bg-[#1A1A2E] text-white">480p</option>
+                              <option value="360p" className="bg-[#1A1A2E] text-white">360p</option>
+                            </select>
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-xs text-white/50 mb-1 block">Type</label>
+                            <select value={streamType} onChange={(e) => setStreamType(e.target.value)} className="w-full px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm">
+                              <option value="embed">Embed</option>
+                              <option value="direct">Direct (MP4/Video)</option>
+                              <option value="hls">HLS (m3u8)</option>
+                              <option value="download">Download Only</option>
+                            </select>
+                          </div>
+                          <div className="md:col-span-1">
+                            <Button onClick={handleAddStream} className="w-full bg-[#6C5DD3] p-0 h-[38px]"><Plus className="w-4 h-4" /></Button>
+                          </div>
+                        </div>
+
+                        {/* Stream List */}
+                        <div className="space-y-2">
+                          {episodeToEdit.streams?.map((stream: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg text-sm">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <span className="font-bold text-white shrink-0">{stream.server}</span>
+                                <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-white/70">{stream.quality}</span>
+                                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs uppercase">{stream.type}</span>
+                                <span className="text-white/40 truncate text-xs">{stream.url}</span>
+                              </div>
+                              <button onClick={() => handleDeleteStream(idx)} className="text-white/30 hover:text-red-400 p-1"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                          ))}
+                          {(!episodeToEdit.streams || episodeToEdit.streams.length === 0) && (
+                            <p className="text-center text-white/30 text-sm py-2">Belum ada link manual.</p>
+                          )}
+                        </div>
+
+                        {/* Generate Thumbnail */}
+                        {(episodeToEdit.streams?.length > 0 || episodeToEdit.manualStreams?.length > 0) && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <label className="text-sm font-medium text-white mb-2 block">
+                              {episodeToEdit.thumbnail ? 'Regenerate Thumbnail' : 'Generate Thumbnail'}
+                            </label>
+                            <div className="flex gap-2">
+                              <select
+                                className="flex-1 px-3 py-2 bg-[#1A1A2E] rounded border border-white/10 text-white text-sm"
+                                value={episodeToEdit._thumbnailSource || ''}
+                                onChange={(e) => {
+                                  setEpisodeToEdit({ ...episodeToEdit, _thumbnailSource: e.target.value });
+                                }}
+                              >
+                                <option value="">Pilih stream untuk thumbnail...</option>
+                                {/* Direct streams */}
+                                {episodeToEdit.streams
+                                  ?.filter((s: any) => s.type === 'direct' || s.type === 'embed')
+                                  .map((s: any, i: number) => (
+                                    <option key={`stream-${i}`} value={s.url}>{s.server} ({s.quality})</option>
+                                  ))}
+                                {/* Manual streams */}
+                                {episodeToEdit.manualStreams?.map((s: any, i: number) => (
+                                  <option key={`manual-${i}`} value={s.url}>Manual: {s.server} ({s.quality})</option>
+                                ))}
+                              </select>
+                              <Button
+                                onClick={async () => {
+                                  const videoUrl = episodeToEdit._thumbnailSource || episodeToEdit.streams?.find((s: any) => s.type === 'direct')?.url || episodeToEdit.manualStreams?.[0]?.url;
+                                  if (!videoUrl) {
+                                    toast({ title: 'Error', description: 'Pilih stream terlebih dahulu', variant: 'destructive' });
+                                    return;
+                                  }
+                                  try {
+                                    toast({ title: 'Generating...', description: 'Membuat thumbnail dari video', variant: 'default' });
+                                    const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}/episode/${episodeToEdit.ep}/thumbnail`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ videoUrl }),
+                                    });
+                                    console.log('[Admin] Thumbnail response status:', res.status);
+                                    if (!res.ok) {
+                                      const errData = await res.json().catch(() => ({}));
+                                      console.error('[Admin] Thumbnail error:', errData);
+                                      throw new Error(errData.error || `HTTP ${res.status}`);
+                                    }
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      setEpisodeToEdit({ ...episodeToEdit, thumbnail: data.thumbnailUrl, _thumbnailSource: videoUrl });
+                                      toast({ title: 'Success', description: 'Thumbnail berhasil dibuat!', variant: 'success' });
+                                    } else {
+                                      toast({ title: 'Error', description: data.error || 'Gagal membuat thumbnail', variant: 'destructive' });
+                                    }
+                                  } catch (err) {
+                                    toast({ title: 'Error', description: 'Terjadi kesalahan saat membuat thumbnail', variant: 'destructive' });
+                                  }
+                                }}
+                                disabled={!episodeToEdit._thumbnailSource && !episodeToEdit.streams?.length && !episodeToEdit.manualStreams?.length}
+                                className="bg-[#6C5DD3] hover:bg-[#5a4ec0]"
+                                title={episodeToEdit.thumbnail ? 'Regenerate thumbnail' : 'Generate thumbnail'}
+                              >
+                                <Camera className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {episodeToEdit.thumbnail && (
+                              <div className="mt-2">
+                                <img
+                                  src={episodeToEdit.thumbnail}
+                                  alt="Thumbnail preview"
+                                  className="w-full h-32 object-cover rounded-lg border border-white/10"
+                                />
+                                <p className="text-xs text-white/50 mt-1">
+                                  Klik tombol untuk regenerate dengan timestamp berbeda (random 3-10 menit)
+                                </p>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fixed Footer */}
+                  {episodeToEdit && (
+                    <div className="flex-shrink-0 pt-4 border-t border-white/10">
+                      <Button onClick={handleSaveEpisode} className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0]">Simpan Perubahan</Button>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+
+            </motion.div>
+          )}
+
+          {/* Users Tab - Placeholder */}
+          {activeTab === 'users' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20"
+            >
+              <div className="w-20 h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center">
+                <Users className="w-10 h-10 text-white/30" />
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">Segera Hadir</h2>
+              <p className="text-white/50">Fitur ini sedang dalam pengembangan</p>
+            </motion.div>
+          )}
+
+          {/* Settings Tab - Website & Sidebar Widget Management */}
+          {activeTab === 'settings' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
+            >
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-2">Pengaturan</h1>
+                <p className="text-white/50">Kelola nama website, deskripsi, dan widget sidebar</p>
+              </div>
+
+              {/* Website Settings */}
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center">
+                      <Settings className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Pengaturan Website</h2>
+                      <p className="text-sm text-white/50">Ubah nama dan deskripsi website</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Site Logo */}
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Logo Website
+                    </label>
+
+                    {/* File Upload */}
+                    <div className="mb-3">
+                      <label className="flex items-center gap-2 px-4 py-2 bg-[#6C5DD3]/20 border border-[#6C5DD3]/50 rounded-lg cursor-pointer hover:bg-[#6C5DD3]/30 transition-colors w-fit">
+                        <CloudUpload className="w-4 h-4 text-[#6C5DD3]" />
+                        <span className="text-sm text-white">
+                          {isUploadingLogo ? 'Mengupload...' : 'Upload Logo'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleLogoUpload(file);
+                          }}
+                          disabled={isUploadingLogo}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-xs text-white/40 mt-1">Upload gambar logo (PNG, JPG, WEBP). Maks 2MB.</p>
+                    </div>
+
+                    {logoUploadError && (
+                      <p className="text-xs text-red-400 mb-2">{logoUploadError}</p>
+                    )}
+
+                    {/* URL Input (fallback) */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-white/30 text-sm">URL:</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={siteLogo}
+                        onChange={(e) => setSiteLogo(e.target.value)}
+                        className="w-full pl-14 pr-4 py-2 bg-[#0F0F1A] border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
+                        placeholder="https://example.com/logo.png"
+                      />
+                    </div>
+
+                    {/* Preview */}
+                    {siteLogo && (
+                      <div className="mt-3 flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                        <span className="text-xs text-white/40">Preview:</span>
+                        <div className="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center overflow-hidden">
+                          <img src={siteLogo} alt="Preview" className="w-full h-full object-contain" />
+                        </div>
+                        <button
+                          onClick={() => setSiteLogo('')}
+                          className="ml-auto text-xs text-red-400 hover:text-red-300"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Site Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Nama Website
+                    </label>
+                    <input
+                      type="text"
+                      value={siteName}
+                      onChange={(e) => setSiteName(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
+                      placeholder="Nama website..."
+                    />
+                    <p className="text-xs text-white/40 mt-1">Nama akan muncul di header, footer, dan meta tag</p>
+                  </div>
+
+                  {/* Site Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Deskripsi Website
+                    </label>
+                    <textarea
+                      value={siteDescription}
+                      onChange={(e) => setSiteDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors resize-none"
+                      placeholder="Deskripsi singkat website..."
+                    />
+                    <p className="text-xs text-white/40 mt-1">Deskripsi untuk SEO dan meta tag</p>
+                  </div>
+
+                  {/* Site Email */}
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Email Kontak
+                    </label>
+                    <input
+                      type="email"
+                      value={siteEmail}
+                      onChange={(e) => setSiteEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#6C5DD3] transition-colors"
+                      placeholder="support@domain.com"
+                    />
+                    <p className="text-xs text-white/40 mt-1">Email yang ditampilkan di halaman kontak</p>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-4 border-t border-white/10">
+                    <button
+                      onClick={() => {
+                        setIsSavingSettings(true);
+                        // Save to localStorage
+                        localStorage.setItem('siteName', siteName);
+                        localStorage.setItem('siteDescription', siteDescription);
+                        localStorage.setItem('siteEmail', siteEmail);
+                        localStorage.setItem('siteLogo', siteLogo);
+
+                        // Broadcast site name update to other tabs
+                        if (typeof BroadcastChannel !== 'undefined') {
+                          const bc = new BroadcastChannel('site-settings');
+                          bc.postMessage({ type: 'siteNameUpdated', siteName });
+                          bc.close();
+                        }
+
+                        // Save to backend
+                        apiFetch(`${BACKEND_URL}/api/settings/siteName`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                          body: JSON.stringify({ value: siteName })
+                        }).catch(() => { });
+
+                        apiFetch(`${BACKEND_URL}/api/settings/siteDescription`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                          body: JSON.stringify({ value: siteDescription })
+                        }).catch(() => { });
+
+                        apiFetch(`${BACKEND_URL}/api/settings/siteEmail`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                          body: JSON.stringify({ value: siteEmail })
+                        }).catch(() => { });
+
+                        apiFetch(`${BACKEND_URL}/api/settings/siteLogo`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                          body: JSON.stringify({ value: siteLogo })
+                        }).catch(() => { });
+
+                        // Also save favicon (same as logo)
+                        apiFetch(`${BACKEND_URL}/api/settings/siteFavicon`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                          body: JSON.stringify({ value: siteLogo })
+                        }).catch(() => { });
+
+                        setTimeout(() => {
+                          setIsSavingSettings(false);
+                          toast({
+                            title: 'Berhasil!',
+                            description: 'Pengaturan berhasil disimpan',
+                            variant: 'success',
+                          });
+                        }, 500);
+                      }}
+                      disabled={isSavingSettings}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#6C5DD3] to-[#00C2FF] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {isSavingSettings ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Menyimpan...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Simpan Perubahan
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
-          </motion.div>
-        )}
 
-        {/* Hero Management Tab */}
-        {activeTab === 'hero' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {/* Current Hero Anime */}
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-[#6C5DD3]" />
-                  Anime di Hero Carousel
-                </h2>
-                <p className="text-sm text-white/50 mt-1">
-                  Pilih maksimal 5 anime untuk ditampilkan di Hero carousel. Jika kosong, akan otomatis menggunakan anime rating tertinggi.
-                </p>
-              </div>
-
-              {/* Hero Anime List */}
-              <div className="p-4 space-y-2">
-                {heroAnimeIds.length === 0 ? (
-                  <div className="text-center py-8 text-white/40">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Belum ada anime di Hero</p>
-                    <p className="text-sm">Akan otomatis menggunakan anime dengan rating tertinggi</p>
+              {/* Sidebar Widget Management */}
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5DD3] to-[#00C2FF] flex items-center justify-center">
+                      <Settings className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Widget Sidebar</h2>
+                      <p className="text-sm text-white/50">Aktifkan/nonaktifkan dan atur urutan widget</p>
+                    </div>
                   </div>
-                ) : (
-                  heroAnimeIds.map((id, index) => {
-                    const anime = animeList.find(a => a.id === id || a.cleanSlug === id);
+                </div>
+
+                <div className="p-4 space-y-2">
+                  {sidebarWidgets.map((widget, index) => {
+                    // Icon mapping
+                    const iconMap: Record<string, any> = {
+                      random: Shuffle,
+                      stats: BarChart3,
+                      schedule: Calendar,
+                      topRating: Star,
+                      genres: Tag,
+                    };
+                    const WidgetIcon = iconMap[widget.id] || TrendingUp;
+
                     return (
                       <motion.div
-                        key={id}
+                        key={widget.id}
                         layout
-                        className="flex items-center gap-4 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                        className={`flex items-center gap-4 p-4 rounded-xl transition-all ${widget.enabled
+                          ? 'bg-white/5 border border-white/10'
+                          : 'bg-white/[0.02] border border-white/5 opacity-60'
+                          }`}
                       >
-                        {/* Order Number */}
-                        <div className="w-8 h-8 rounded-lg bg-[#6C5DD3]/20 flex items-center justify-center">
-                          <span className="text-[#6C5DD3] font-bold">{index + 1}</span>
+                        {/* Drag Handle */}
+                        <div className="text-white/30">
+                          <GripVertical className="w-5 h-5" />
                         </div>
 
-                        {/* Thumbnail */}
-                        {anime?.poster && (
-                          <img
-                            src={anime.poster}
-                            alt={anime.title}
-                            className="w-12 h-16 object-cover rounded-lg"
-                            loading="lazy"
-                          />
-                        )}
+                        {/* Widget Icon */}
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${widget.enabled ? 'bg-[#6C5DD3]/20' : 'bg-white/5'
+                          }`}>
+                          <WidgetIcon className={`w-5 h-5 ${widget.enabled ? 'text-[#6C5DD3]' : 'text-white/30'}`} />
+                        </div>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">{anime?.title || id}</p>
-                          <p className="text-xs text-white/50 flex items-center gap-2">
-                            {anime?.rating && (
-                              <span className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-yellow-500" />
-                                {anime.rating.toFixed(1)}
-                              </span>
-                            )}
-                            {anime?.status && <span>{anime.status}</span>}
+                        {/* Widget Name */}
+                        <div className="flex-1">
+                          <h3 className={`font-medium ${widget.enabled ? 'text-white' : 'text-white/50'}`}>
+                            {widget.name}
+                          </h3>
+                          <p className="text-xs text-white/40">
+                            Urutan: {index + 1}
                           </p>
                         </div>
 
-                        {/* Actions */}
+                        {/* Move Buttons */}
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => moveHeroAnime(id, 'up')}
+                            onClick={() => moveWidget(widget.id, 'up')}
                             disabled={index === 0}
                             className={`p-2 rounded-lg transition-colors ${index === 0
                               ? 'text-white/10 cursor-not-allowed'
@@ -3645,143 +3207,581 @@ export default function Admin() {
                             <ChevronUp className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => moveHeroAnime(id, 'down')}
-                            disabled={index === heroAnimeIds.length - 1}
-                            className={`p-2 rounded-lg transition-colors ${index === heroAnimeIds.length - 1
+                            onClick={() => moveWidget(widget.id, 'down')}
+                            disabled={index === sidebarWidgets.length - 1}
+                            className={`p-2 rounded-lg transition-colors ${index === sidebarWidgets.length - 1
                               ? 'text-white/10 cursor-not-allowed'
                               : 'text-white/50 hover:text-white hover:bg-white/10'
                               }`}
                           >
                             <ChevronDown className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => removeFromHero(id)}
-                            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
+
+                        {/* Toggle Switch */}
+                        <button
+                          onClick={() => toggleWidget(widget.id)}
+                          className={`relative w-12 h-7 rounded-full transition-colors ${widget.enabled ? 'bg-[#6C5DD3]' : 'bg-white/10'
+                            }`}
+                        >
+                          <motion.div
+                            layout
+                            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${widget.enabled ? 'left-6' : 'left-1'
+                              }`}
+                          />
+                        </button>
                       </motion.div>
                     );
-                  })
-                )}
-              </div>
+                  })}
+                </div>
 
-              {/* Info */}
-              <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
-                <p className="text-sm text-blue-300">
-                  💡 Hero carousel akan menampilkan anime sesuai urutan di atas. Refresh halaman Home untuk melihat perubahan.
-                </p>
-              </div>
-            </div>
-
-            {/* Add Anime to Hero */}
-            <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h2 className="text-lg font-bold text-white">Tambah Anime ke Hero</h2>
-              </div>
-
-              {/* Search */}
-              <div className="p-4 border-b border-white/5">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                  <input
-                    type="text"
-                    placeholder="Cari anime..."
-                    value={heroSearchQuery}
-                    onChange={(e) => setHeroSearchQuery(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#6C5DD3]"
-                  />
+                {/* Info */}
+                <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
+                  <p className="text-sm text-blue-300">
+                    💡 Perubahan akan langsung diterapkan di halaman Home. Refresh Home untuk melihat perubahan.
+                  </p>
                 </div>
               </div>
 
-              {/* Anime Grid */}
-              <div className="p-4 max-h-[400px] overflow-y-auto">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {animeList
-                    .filter(anime =>
-                      !heroAnimeIds.includes(anime.id) &&
-                      !heroAnimeIds.includes(anime.cleanSlug || '') &&
-                      anime.title.toLowerCase().includes(heroSearchQuery.toLowerCase())
-                    )
-                    .slice(0, 20)
-                    .map(anime => (
-                      <div
-                        key={anime.id}
-                        className="relative group cursor-pointer"
-                        onClick={() => addToHero(anime.cleanSlug || anime.id)}
+              {/* Home Sections Management */}
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] rounded-2xl border border-white/10 overflow-hidden">
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B6B] to-[#FF8E53] flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Home Sections</h2>
+                      <p className="text-sm text-white/50">Tampilkan atau sembunyikan section di halaman Home</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 space-y-2">
+                  {homeSections.map((section, index) => {
+                    const iconMap: Record<string, any> = {
+                      trending: TrendingUp,
+                      continue: PlaySquare,
+                      foryou: Sparkles,
+                      ongoing: Film,
+                      latest: Search,
+                      explore: Shuffle,
+                      completed: CheckCircle2,
+                    };
+                    const SectionIcon = iconMap[section.id] || TrendingUp;
+
+                    return (
+                      <motion.div
+                        key={section.id}
+                        layout
+                        className={`flex items-center gap-4 p-4 rounded-xl transition-all ${section.enabled
+                          ? 'bg-white/5 border border-white/10'
+                          : 'bg-white/[0.02] border border-white/5 opacity-60'
+                          }`}
                       >
-                        <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
-                          <img
-                            src={anime.poster}
-                            alt={anime.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            loading="lazy"
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${section.enabled ? 'bg-[#6C5DD3]/20' : 'bg-white/5'
+                          }`}>
+                          <SectionIcon className={`w-5 h-5 ${section.enabled ? 'text-[#6C5DD3]' : 'text-white/30'}`} />
+                        </div>
+
+                        <div className="flex-1">
+                          <h3 className={`font-medium ${section.enabled ? 'text-white' : 'text-white/50'}`}>
+                            {section.name}
+                          </h3>
+                          {section.description && (
+                            <p className="text-xs text-white/40">{section.description}</p>
+                          )}
+                        </div>
+
+                        {/* Reorder Buttons */}
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => moveHomeSection(section.id, 'up')}
+                            disabled={index === 0}
+                            className={`p-1 rounded transition-colors ${index === 0
+                              ? 'text-white/10 cursor-not-allowed'
+                              : 'text-white/50 hover:text-white hover:bg-white/10'
+                              }`}
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => moveHomeSection(section.id, 'down')}
+                            disabled={index === homeSections.length - 1}
+                            className={`p-1 rounded transition-colors ${index === homeSections.length - 1
+                              ? 'text-white/10 cursor-not-allowed'
+                              : 'text-white/50 hover:text-white hover:bg-white/10'
+                              }`}
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => toggleHomeSection(section.id)}
+                          className={`relative w-12 h-7 rounded-full transition-colors ${section.enabled ? 'bg-[#6C5DD3]' : 'bg-white/10'
+                            }`}
+                        >
+                          <motion.div
+                            layout
+                            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${section.enabled ? 'left-6' : 'left-1'
+                              }`}
                           />
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="p-3 bg-[#6C5DD3] rounded-full">
-                              <Plus className="w-5 h-5 text-white" />
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
+                  <p className="text-sm text-blue-300">
+                    💡 Home akan mengikuti pengaturan ini secara otomatis.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reset Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    const defaults = [
+                      { id: 'random', name: 'Tombol Anime Random', enabled: true, order: 0 },
+                      { id: 'stats', name: 'Statistik User', enabled: true, order: 1 },
+                      { id: 'schedule', name: 'Jadwal Rilis', enabled: true, order: 2 },
+                      { id: 'topRating', name: 'Top Rating', enabled: true, order: 3 },
+                      { id: 'genres', name: 'Genre Populer', enabled: true, order: 4 },
+                    ];
+                    saveSidebarWidgets(defaults);
+                    showToast('Widget direset ke default!', 'success');
+                  }}
+                  variant="outline"
+                  className="border-white/10 text-white/70 hover:bg-white/5"
+                >
+                  Reset ke Default
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Generate Subtitle Tab */}
+          {activeTab === 'generate-sub' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/5">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Captions className="w-5 h-5 text-[#6C5DD3]" />
+                    AI Subtitle Generator
+                  </h2>
+                  <p className="text-white/50 text-sm mt-1">Generate subtitle otomatis menggunakan AI Speech-to-Text</p>
+                </div>
+
+                {/* Settings */}
+                <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                  <h3 className="text-white font-medium mb-4">Pengaturan</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-white/60 text-sm block mb-2">Provider</label>
+                      <select
+                        value={subtitleProvider}
+                        onChange={(e) => setSubtitleProvider(e.target.value as 'openai' | 'local')}
+                        className="w-full px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#6C5DD3]"
+                      >
+                        <option value="openai">OpenAI Whisper API (~$0.006/menit)</option>
+                        <option value="local">Local Whisper (Gratis, lebih lambat)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-white/60 text-sm block mb-2">Bahasa Output</label>
+                      <select
+                        value={subtitleLanguage || 'auto'}
+                        onChange={(e) => setSubtitleLanguage(e.target.value === 'auto' ? null : e.target.value)}
+                        className="w-full px-4 py-2.5 bg-[#0F0F1A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#6C5DD3]"
+                      >
+                        <option value="auto">Auto Detect</option>
+                        <option value="ja">Jepang (Original)</option>
+                        <option value="id">Indonesia (Translate)</option>
+                        <option value="en">English (Translate)</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-sm">
+                        💡 Hanya episode dengan video direct yang bisa di-generate
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Anime List */}
+                <div className="p-6">
+                  <h3 className="text-white font-medium mb-4">Pilih Anime</h3>
+
+                  {/* Search */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                    <input
+                      type="text"
+                      placeholder="Cari anime..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-[#0F0F1A] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#6C5DD3]"
+                    />
+                  </div>
+
+                  {/* Anime Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {filteredAnime
+                      .filter(anime => anime.episodeData?.some((ep: any) => ep.streams?.some((s: any) => s.type === 'direct')))
+                      .map((anime, idx) => {
+                        const episodesWithDirect = anime.episodeData?.filter((ep: any) =>
+                          ep.streams?.some((s: any) => s.type === 'direct')
+                        ).length || 0;
+                        const episodesWithSub = anime.episodeData?.filter((ep: any) => ep.subtitle?.url).length || 0;
+
+                        return (
+                          <motion.div
+                            key={anime.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.02 }}
+                            className="bg-[#0F0F1A] border border-white/10 rounded-xl overflow-hidden hover:border-[#6C5DD3]/50 transition-all"
+                          >
+                            <div className="relative aspect-[2/3]">
+                              <img
+                                src={anime.poster}
+                                alt={anime.title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                              {/* Stats */}
+                              <div className="absolute bottom-2 left-2 right-2 space-y-1">
+                                <div className="flex items-center gap-1 text-xs">
+                                  <span className="px-1.5 py-0.5 bg-green-500/80 text-white rounded">{episodesWithDirect} Direct</span>
+                                  <span className={`px-1.5 py-0.5 rounded ${episodesWithSub > 0 ? 'bg-blue-500/80' : 'bg-white/20'} text-white`}>
+                                    {episodesWithSub} CC
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="p-3">
+                              <h4 className="text-white text-sm font-medium line-clamp-2 mb-2">{anime.title}</h4>
+                              <Button
+                                onClick={() => setSelectedAnimeForEpisodes(anime)}
+                                size="sm"
+                                className="w-full bg-[#6C5DD3] hover:bg-[#5a4ec0] text-xs"
+                              >
+                                <Captions className="w-3 h-3 mr-1" /> Generate Sub
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                  </div>
+
+                  {filteredAnime.filter(anime => anime.episodeData?.some((ep: any) => ep.streams?.some((s: any) => s.type === 'direct'))).length === 0 && (
+                    <div className="text-center py-16 bg-white/5 rounded-xl border border-white/5">
+                      <Captions className="w-12 h-12 mx-auto mb-3 text-white/20" />
+                      <h3 className="text-white font-medium mb-1">Tidak ada anime dengan video direct</h3>
+                      <p className="text-white/40 text-sm">Upload video episode terlebih dahulu di Kelola Episode</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Anime Episodes */}
+              {selectedAnimeForEpisodes && (
+                <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={selectedAnimeForEpisodes.poster}
+                        alt=""
+                        className="w-16 h-20 object-cover rounded-lg"
+                        loading="lazy"
+                      />
+                      <div>
+                        <h3 className="text-white font-bold">{selectedAnimeForEpisodes.title}</h3>
+                        <p className="text-white/50 text-sm">{selectedAnimeForEpisodes.studio} • {selectedAnimeForEpisodes.releasedYear}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" onClick={() => setSelectedAnimeForEpisodes(null)} className="text-white/50 hover:text-white">
+                      ← Kembali
+                    </Button>
+                  </div>
+
+                  <div className="p-6">
+                    <h4 className="text-white font-medium mb-4">Episode dengan Video Direct</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                      {selectedAnimeForEpisodes.episodeData
+                        ?.filter((ep: any) => ep.streams?.some((s: any) => s.type === 'direct'))
+                        .sort((a: any, b: any) => a.ep - b.ep)
+                        .map((ep: any) => {
+                          const hasSubtitle = !!ep.subtitle?.url;
+
+                          return (
+                            <div
+                              key={ep.ep}
+                              className={`relative p-4 rounded-xl border text-center ${hasSubtitle
+                                ? 'bg-blue-500/10 border-blue-500/30'
+                                : 'bg-green-500/10 border-green-500/30'
+                                }`}
+                            >
+                              <div className="text-2xl font-bold text-white mb-1">{ep.ep}</div>
+                              <div className="text-xs text-white/50 mb-2">
+                                {hasSubtitle ? 'CC Ready' : 'No Sub'}
+                              </div>
+                              <Button
+                                onClick={() => handleGenerateSubtitle(ep.ep)}
+                                disabled={isGeneratingSubtitle}
+                                size="sm"
+                                className={`w-full text-xs ${hasSubtitle
+                                  ? 'bg-blue-600 hover:bg-blue-700'
+                                  : 'bg-orange-600 hover:bg-orange-700'
+                                  }`}
+                              >
+                                {isGeneratingSubtitle && generatingEpisode === ep.ep ? (
+                                  <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing</>
+                                ) : (
+                                  <>{hasSubtitle ? 'Regenerate' : 'Generate'}</>
+                                )}
+                              </Button>
+
+                              {hasSubtitle && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Hero Management Tab */}
+          {activeTab === 'hero' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              {/* Current Hero Anime */}
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/5">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-[#6C5DD3]" />
+                    Anime di Hero Carousel
+                  </h2>
+                  <p className="text-sm text-white/50 mt-1">
+                    Pilih maksimal 5 anime untuk ditampilkan di Hero carousel. Jika kosong, akan otomatis menggunakan anime rating tertinggi.
+                  </p>
+                </div>
+
+                {/* Hero Anime List */}
+                <div className="p-4 space-y-2">
+                  {heroAnimeIds.length === 0 ? (
+                    <div className="text-center py-8 text-white/40">
+                      <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>Belum ada anime di Hero</p>
+                      <p className="text-sm">Akan otomatis menggunakan anime dengan rating tertinggi</p>
+                    </div>
+                  ) : (
+                    heroAnimeIds.map((id, index) => {
+                      const anime = animeList.find(a => a.id === id || a.cleanSlug === id);
+                      return (
+                        <motion.div
+                          key={id}
+                          layout
+                          className="flex items-center gap-4 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                        >
+                          {/* Order Number */}
+                          <div className="w-8 h-8 rounded-lg bg-[#6C5DD3]/20 flex items-center justify-center">
+                            <span className="text-[#6C5DD3] font-bold">{index + 1}</span>
+                          </div>
+
+                          {/* Thumbnail */}
+                          {anime?.poster && (
+                            <img
+                              src={anime.poster}
+                              alt={anime.title}
+                              className="w-12 h-16 object-cover rounded-lg"
+                              loading="lazy"
+                            />
+                          )}
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium truncate">{anime?.title || id}</p>
+                            <p className="text-xs text-white/50 flex items-center gap-2">
+                              {anime?.rating && (
+                                <span className="flex items-center gap-1">
+                                  <Star className="w-3 h-3 text-yellow-500" />
+                                  {anime.rating.toFixed(1)}
+                                </span>
+                              )}
+                              {anime?.status && <span>{anime.status}</span>}
+                            </p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => moveHeroAnime(id, 'up')}
+                              disabled={index === 0}
+                              className={`p-2 rounded-lg transition-colors ${index === 0
+                                ? 'text-white/10 cursor-not-allowed'
+                                : 'text-white/50 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => moveHeroAnime(id, 'down')}
+                              disabled={index === heroAnimeIds.length - 1}
+                              className={`p-2 rounded-lg transition-colors ${index === heroAnimeIds.length - 1
+                                ? 'text-white/10 cursor-not-allowed'
+                                : 'text-white/50 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeFromHero(id)}
+                              className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="p-4 bg-blue-500/10 border-t border-blue-500/20">
+                  <p className="text-sm text-blue-300">
+                    💡 Hero carousel akan menampilkan anime sesuai urutan di atas. Refresh halaman Home untuk melihat perubahan.
+                  </p>
+                </div>
+              </div>
+
+              {/* Add Anime to Hero */}
+              <div className="bg-gradient-to-br from-[#1A1A2E] to-[#12121F] border border-white/5 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/5">
+                  <h2 className="text-lg font-bold text-white">Tambah Anime ke Hero</h2>
+                </div>
+
+                {/* Search */}
+                <div className="p-4 border-b border-white/5">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <input
+                      type="text"
+                      placeholder="Cari anime..."
+                      value={heroSearchQuery}
+                      onChange={(e) => setHeroSearchQuery(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#6C5DD3]"
+                    />
+                  </div>
+                </div>
+
+                {/* Anime Grid */}
+                <div className="p-4 max-h-[400px] overflow-y-auto">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {animeList
+                      .filter(anime =>
+                        !heroAnimeIds.includes(anime.id) &&
+                        !heroAnimeIds.includes(anime.cleanSlug || '') &&
+                        anime.title.toLowerCase().includes(heroSearchQuery.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map(anime => (
+                        <div
+                          key={anime.id}
+                          className="relative group cursor-pointer"
+                          onClick={() => addToHero(anime.cleanSlug || anime.id)}
+                        >
+                          <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
+                            <img
+                              src={anime.poster}
+                              alt={anime.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="p-3 bg-[#6C5DD3] rounded-full">
+                                <Plus className="w-5 h-5 text-white" />
+                              </div>
                             </div>
                           </div>
+                          <p className="mt-2 text-sm text-white truncate">{anime.title}</p>
+                          <p className="text-xs text-white/50 flex items-center gap-1">
+                            <Star className="w-3 h-3 text-yellow-500" />
+                            {anime.rating?.toFixed(1) || '0.0'}
+                          </p>
                         </div>
-                        <p className="mt-2 text-sm text-white truncate">{anime.title}</p>
-                        <p className="text-xs text-white/50 flex items-center gap-1">
-                          <Star className="w-3 h-3 text-yellow-500" />
-                          {anime.rating?.toFixed(1) || '0.0'}
-                        </p>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Reset Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  saveHeroSettings([]);
-                  showToast('Hero direset! Akan menggunakan anime rating tertinggi.', 'success');
-                }}
-                variant="outline"
-                className="border-white/10 text-white/70 hover:bg-white/5"
-              >
-                Reset ke Default (Auto)
-              </Button>
-            </div>
-          </motion.div>
-        )}
+              {/* Reset Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    saveHeroSettings([]);
+                    showToast('Hero direset! Akan menggunakan anime rating tertinggi.', 'success');
+                  }}
+                  variant="outline"
+                  className="border-white/10 text-white/70 hover:bg-white/5"
+                >
+                  Reset ke Default (Auto)
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-        {/* Users Management */}
-        {activeTab === 'users' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <AdminUsers />
-          </motion.div>
-        )}
+          {/* Users Management */}
+          {activeTab === 'users' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <AdminUsers />
+            </motion.div>
+          )}
 
-        {/* Badge Management */}
-        {activeTab === 'badges' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <AdminBadges />
-          </motion.div>
-        )}
+          {/* Badge Management */}
+          {activeTab === 'badges' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <AdminBadges />
+            </motion.div>
+          )}
 
-        {/* Content Moderation */}
-        {activeTab === 'moderation' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <AdminModeration />
-          </motion.div>
-        )}
-      </main>
-    </div >
+          {/* Content Moderation */}
+          {activeTab === 'moderation' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <AdminModeration />
+            </motion.div>
+          )}
+        </main>
+      </div >
     </>
   );
 }
