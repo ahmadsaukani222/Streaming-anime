@@ -53,6 +53,7 @@ const customAnimeSchema = new mongoose.Schema({
 });
 
 // Auto-generate cleanSlug before saving
+// Note: Mongoose 5+ supports async pre hooks without next()
 customAnimeSchema.pre('save', async function () {
     if (this.title && !this.cleanSlug) {
         this.cleanSlug = this.title

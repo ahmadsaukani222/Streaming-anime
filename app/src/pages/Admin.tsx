@@ -36,7 +36,8 @@ import {
   Award,
   Menu,
   Sparkles,
-  Camera
+  Camera,
+  RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -660,6 +661,22 @@ export default function Admin() {
 
     setIsBatchUploading(false);
     showToast(`Batch upload selesai! ${batchFiles.filter(f => f.status === 'complete').length}/${batchFiles.length} berhasil`);
+    
+    // Refresh anime data from server to get latest episode data
+    if (selectedAnimeForEpisodes) {
+      try {
+        const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
+        if (res.ok) {
+          const freshData = await res.json();
+          setSelectedAnimeForEpisodes(freshData);
+          // Also update in animeList
+          updateAnime(selectedAnimeForEpisodes.id, freshData);
+          console.log('[Admin] Refreshed anime data after batch upload');
+        }
+      } catch (err) {
+        console.error('[Admin] Failed to refresh anime data:', err);
+      }
+    }
   };
 
   // Handle video upload to R2 via presigned URL (bypasses Cloudflare Tunnel limit)
@@ -749,6 +766,21 @@ export default function Admin() {
         setEpisodeToEdit({ ...episodeToEdit, streams: [...currentStreams, newStream] });
         setUploadFile(null);
         showToast('Video berhasil diupload!', 'success');
+        
+        // Refresh anime data from server
+        if (selectedAnimeForEpisodes) {
+          try {
+            const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
+            if (res.ok) {
+              const freshData = await res.json();
+              setSelectedAnimeForEpisodes(freshData);
+              updateAnime(selectedAnimeForEpisodes.id, freshData);
+              console.log('[Admin] Refreshed anime data after upload');
+            }
+          } catch (err) {
+            console.error('[Admin] Failed to refresh anime data:', err);
+          }
+        }
       } else {
         showToast(confirmData.error || 'Upload gagal', 'error');
       }
@@ -2292,6 +2324,30 @@ export default function Admin() {
                           className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
                         >
                           <Camera className="w-4 h-4 mr-2" /> Generate All Thumbnails
+                        </Button>
+
+                        {/* Refresh Button */}
+                        <Button
+                          onClick={async () => {
+                            try {
+                              toast({ title: 'Refreshing...', description: 'Memuat ulang data anime dari server', variant: 'default' });
+                              const res = await apiFetch(`${BACKEND_URL}/api/anime/${selectedAnimeForEpisodes.id}`);
+                              if (!res.ok) {
+                                const errData = await res.json().catch(() => ({}));
+                                throw new Error(errData.error || `HTTP ${res.status}`);
+                              }
+                              const refreshedAnime = await res.json();
+                              setSelectedAnimeForEpisodes(refreshedAnime);
+                              updateAnime(refreshedAnime.id, refreshedAnime);
+                              toast({ title: 'Berhasil!', description: 'Data anime telah diperbarui', variant: 'success' });
+                            } catch (err: any) {
+                              toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                            }
+                          }}
+                          variant="outline"
+                          className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" /> Refresh Data
                         </Button>
                       </div>
 
