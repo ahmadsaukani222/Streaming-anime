@@ -7,9 +7,46 @@ const quinime = require('../utils/quinime-scraper');
 const nonton = require('../utils/nontonanimeid-scraper');
 const { generateSubtitle, checkFFmpeg, translateText } = require('../utils/subtitle-generator');
 const { uploadFile: uploadToR2 } = require('../utils/r2-storage');
-const { processImage } = require('../utils/imageProxy');
+const { processImage, getCachedImageUrl, isAllowedSource, isWebPEnabled } = require('../utils/imageProxy');
 const { requireAdmin } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
+
+// R2 URL replacement settings
+const ENABLE_R2_IMAGE_URLS = process.env.ENABLE_R2_IMAGES !== 'false'; // Default: enabled
+
+/**
+ * Replace anime poster/banner URLs with R2 cached WebP versions
+ * @param {Object} anime - Anime object
+ * @returns {Object} - Anime with replaced URLs
+ */
+function replaceWithCachedUrls(anime) {
+    if (!ENABLE_R2_IMAGE_URLS || !anime) return anime;
+
+    const animeObj = anime.toObject ? anime.toObject() : { ...anime };
+
+    // Replace poster
+    if (animeObj.poster && isAllowedSource(animeObj.poster)) {
+        animeObj.poster = getCachedImageUrl(animeObj.poster);
+    }
+
+    // Replace banner
+    if (animeObj.banner && isAllowedSource(animeObj.banner)) {
+        animeObj.banner = getCachedImageUrl(animeObj.banner);
+    }
+
+    return animeObj;
+}
+
+/**
+ * Replace URLs for array of anime
+ * @param {Array} animeList - Array of anime objects
+ * @returns {Array} - Array with replaced URLs
+ */
+function replaceWithCachedUrlsBatch(animeList) {
+    if (!ENABLE_R2_IMAGE_URLS || !Array.isArray(animeList)) return animeList;
+    return animeList.map(anime => replaceWithCachedUrls(anime));
+}
+
 
 // Get all custom anime (that are not deleted)
 router.get('/custom', async (req, res) => {
@@ -21,7 +58,11 @@ router.get('/custom', async (req, res) => {
         const customAnimes = await CustomAnime.find({
             id: { $nin: deletedIds }
         });
-        res.json(customAnimes);
+
+        // Replace poster/banner URLs with R2 cached WebP versions
+        const animesWithCachedUrls = replaceWithCachedUrlsBatch(customAnimes);
+
+        res.json(animesWithCachedUrls);
     } catch (err) {
         console.error('[Anime] Get custom anime error:', err.message);
         return res.status(500).json({ error: 'Server error', message: err.message });
@@ -155,7 +196,8 @@ router.get('/:id', async (req, res) => {
                 await anime.save();
                 console.log(`[API] Generated cleanSlug for ${anime.id}: ${anime.cleanSlug}`);
             }
-            return res.json(anime);
+            // Replace poster/banner URLs with R2 cached WebP versions
+            return res.json(replaceWithCachedUrls(anime));
         }
 
         // 2. Try Scrapers Fallback
