@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
-import { getAnimeUrl, getOptimizedImageUrl } from '@/lib/slug';
+import { getAnimeUrl } from '@/lib/slug';
 import type { Anime } from '@/data/animeData';
 
 interface SearchSuggestionsProps {
