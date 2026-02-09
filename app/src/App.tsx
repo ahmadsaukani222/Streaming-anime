@@ -13,13 +13,11 @@ const Footer = lazy(() => import('@/components/Footer'));
 const BottomNav = lazy(() => import('@/components/BottomNav'));
 
 // ==========================================
-// ALL PAGES ARE NOW LAZY LOADED
-// This reduces initial bundle size significantly
-// Mobile-first components inside pages are eager
+// CRITICAL PAGES (Eager for LCP)
+// Home is eagerly loaded to avoid request chain
+// that delays LCP (Largest Contentful Paint)
 // ==========================================
-
-// Home page (contains internal mobile-first optimization)
-const Home = lazy(() => import('@/pages/Home'));
+import Home from '@/pages/Home';
 
 // ==========================================
 // LAZY LOADED PAGES (Code Splitting)
@@ -121,12 +119,8 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Home - Lazy loaded with mobile-first internal components */}
-      <Route path="/" element={
-        <Suspense fallback={<PageLoader />}>
-          <Home />
-        </Suspense>
-      } />
+      {/* Home - Eagerly loaded for best LCP */}
+      <Route path="/" element={<Home />} />
       <Route path="/anime/:id" element={
         <Suspense fallback={<PageLoader />}>
           <AnimeDetail />

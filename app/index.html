@@ -34,8 +34,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- DNS prefetch for secondary origins (lighter than preconnect) -->
-  <link rel="dns-prefetch" href="https://cdn.myanimelist.net" />
+  <!-- Preconnect for hero images (critical for LCP) -->
+  <link rel="preconnect" href="https://cdn.myanimelist.net" crossorigin />
 
   <!-- Font loading with display swap -->
   <link rel="preload" as="style"
@@ -44,8 +44,6 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     media="print" onload="this.media='all'" />
 
-  <!-- Preload LCP image (hero) - critical for performance -->
-  <link rel="preload" as="image" href="/images/hero/hero-jujutsu.webp" type="image/webp" fetchpriority="high" />
 
   <meta property="og:title" content="Nonton Anime Subtitle Indonesia HD Gratis Terbaru - Animeku" />
   <meta property="og:description"
