@@ -1,21 +1,82 @@
 // HeroMobile - Lightweight hero carousel for mobile
 // Uses CSS transitions instead of Framer Motion for better performance
+// Synced with admin panel hero settings
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { getAnimeUrl, getWatchUrl } from '@/lib/slug';
+import { BACKEND_URL } from '@/config/api';
+import { apiFetch } from '@/lib/api';
 
 const AUTO_SLIDE_INTERVAL = 5000; // 5 seconds
+
+// Helper function to generate clean slug from title
+const generateCleanSlug = (title: string): string => {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
 
 export default function HeroMobile() {
   const { animeList } = useApp();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [heroAnimeIds, setHeroAnimeIds] = useState<string[]>([]);
 
-  // Get top 5 anime for carousel
+  // Load hero settings from database (same as desktop Hero)
+  useEffect(() => {
+    const loadHeroSettings = async () => {
+      try {
+        const res = await apiFetch(`${BACKEND_URL}/api/settings/heroAnimeIds`);
+        if (!res.ok) return;
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) return;
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setHeroAnimeIds(data);
+        }
+      } catch {
+        // Silently fail, will use fallback
+      }
+    };
+    loadHeroSettings();
+  }, []);
+
+  // Helper function to find anime by slug (id, cleanSlug, or generated from title)
+  const findAnimeBySlug = useCallback((slug: string) => {
+    return animeList.find(a => {
+      if (a.id === slug) return true;
+      if (a.cleanSlug === slug) return true;
+      const generatedSlug = generateCleanSlug(a.title);
+      if (generatedSlug === slug) return true;
+      if (a.id.startsWith(slug + '-')) return true;
+      return false;
+    });
+  }, [animeList]);
+
+  // Use custom hero anime if available, otherwise fallback to top rated
   const slides = useMemo(() => {
+    if (heroAnimeIds.length > 0 && animeList.length > 0) {
+      const customSlides = heroAnimeIds
+        .map(id => findAnimeBySlug(id))
+        .filter((anime): anime is NonNullable<typeof anime> => anime !== undefined)
+        .map(anime => ({
+          ...anime,
+          image: anime.poster,
+          description: anime.synopsis
+        }));
+
+      if (customSlides.length > 0) {
+        return customSlides;
+      }
+    }
+
+    // Fallback to top rated anime
     if (animeList.length === 0) return [];
     return [...animeList]
       .sort((a, b) => b.rating - a.rating)
@@ -25,7 +86,7 @@ export default function HeroMobile() {
         image: anime.poster,
         description: anime.synopsis
       }));
-  }, [animeList]);
+  }, [heroAnimeIds, animeList, findAnimeBySlug]);
 
   // Auto-slide logic
   useEffect(() => {
