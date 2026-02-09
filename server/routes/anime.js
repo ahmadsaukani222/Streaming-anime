@@ -802,6 +802,41 @@ router.get('/trending/weekly', async (req, res) => {
     }
 });
 
+// GET /api/anime/trending - Alias untuk /trending/weekly (untuk kompatibilitas frontend)
+router.get('/trending', async (req, res) => {
+    try {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        // Aggregate views from the past 7 days
+        const trendingData = await ViewHistory.aggregate([
+            { $match: { date: { $gte: weekAgo } } },
+            { $group: { _id: '$animeId', weeklyViews: { $sum: 1 } } },
+            { $sort: { weeklyViews: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Get anime details for trending
+        const animeIds = trendingData.map(t => t._id);
+        const animeList = await CustomAnime.find({ id: { $in: animeIds } });
+
+        // Map with weekly views count
+        const trending = trendingData.map(t => {
+            const anime = animeList.find(a => a.id === t._id);
+            if (!anime) return null;
+            return {
+                ...anime.toObject(),
+                weeklyViews: t.weeklyViews
+            };
+        }).filter(Boolean);
+
+        res.json(trending);
+    } catch (err) {
+        console.error('[API] Get trending error:', err);
+        res.status(500).json({ error: 'Failed to get trending', message: err.message });
+    }
+});
+
 // POST /api/anime/:id/view - Track a view for an anime
 router.post('/:id/view', async (req, res) => {
     try {
