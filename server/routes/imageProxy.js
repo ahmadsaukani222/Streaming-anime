@@ -16,7 +16,9 @@ const {
     isAllowedSource,
     getCachedImageUrl,
     imageExistsInR2,
-    getImageKey
+    getImageKey,
+    getLegacyImageKey,
+    isWebPEnabled
 } = require('../utils/imageProxy');
 
 /**
@@ -144,13 +146,32 @@ router.get('/status', async (req, res) => {
             });
         }
 
-        const key = getImageKey(decodedUrl);
-        const exists = await imageExistsInR2(key);
+        const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+
+        // Check WebP version first (if WebP is enabled)
+        if (isWebPEnabled()) {
+            const webpKey = getImageKey(decodedUrl, true);
+            const webpExists = await imageExistsInR2(webpKey);
+            if (webpExists) {
+                return res.json({
+                    url: decodedUrl,
+                    cached: true,
+                    cachedUrl: `${R2_PUBLIC_URL}/${webpKey}`,
+                    format: 'webp',
+                    allowed: true,
+                });
+            }
+        }
+
+        // Check legacy (original format) version
+        const legacyKey = getLegacyImageKey(decodedUrl);
+        const legacyExists = await imageExistsInR2(legacyKey);
 
         return res.json({
             url: decodedUrl,
-            cached: exists,
-            cachedUrl: exists ? getCachedImageUrl(decodedUrl) : null,
+            cached: legacyExists,
+            cachedUrl: legacyExists ? `${R2_PUBLIC_URL}/${legacyKey}` : null,
+            format: legacyExists ? 'original' : null,
             allowed: true,
         });
     } catch (error) {
