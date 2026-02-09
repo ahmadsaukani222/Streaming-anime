@@ -10,12 +10,10 @@ import {
   Minimize,
   SkipBack,
   SkipForward,
-  Settings,
   PictureInPicture2,
   Sun,
   Repeat,
   FastForward,
-  Film,
   Users,
   Share2,
   ChevronLeft,
@@ -102,14 +100,15 @@ export default function VideoPlayer({
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressSaveIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Playback State
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
+  const [_isPiP, setIsPiP] = useState(false);
   
   // Resume State
   const [showResumePrompt, setShowResumePrompt] = useState(false);
@@ -122,9 +121,7 @@ export default function VideoPlayer({
   // UI State
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isPiP, setIsPiP] = useState(false);
   const [brightness, setBrightness] = useState(100);
-  const [showSettings, setShowSettings] = useState(false);
   const [showBrightness, setShowBrightness] = useState(false);
   const [showQualitySelector, setShowQualitySelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

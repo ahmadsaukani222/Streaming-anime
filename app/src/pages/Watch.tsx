@@ -57,21 +57,21 @@ export default function Watch() {
   const roomFromUrl = searchParams.get('room');
   const { animeList, updateWatchProgress, user } = useApp();
   // UI Enhancement States
-  const [isTheaterMode, setIsTheaterMode] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [isTheaterMode] = useState(false);
+  const [, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   // Video streaming states
   const [isEmbed, setIsEmbed] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string>('');
-  const [autoNextEnabled, setAutoNextEnabled] = useState(true);
+  const [autoNextEnabled] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<string>('');
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
-  const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
+  const [, setAllDirectStreams] = useState<any[]>([]);
   const [selectedServer, setSelectedServer] = useState('server1');
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
+  const [, setIsLoadingVideo] = useState(false);
+  const [, setVideoError] = useState<string | null>(null);
   const [skipTimes, setSkipTimes] = useState<SkipTimes | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const durationRef = useRef<number>(0);
