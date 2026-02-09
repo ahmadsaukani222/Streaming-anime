@@ -1,22 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ChevronLeft,
-  Share2,
-  Flag,
   List,
   ChevronRight,
-  ChevronLeft as ChevronLeftIcon,
-  Settings,
-  Monitor,
-  Keyboard,
-  Camera,
-  Film,
-  Users,
-  Maximize,
-  Minimize
+  ChevronLeft as ChevronLeftIcon
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import AnimeCard from '@/components/AnimeCard';
@@ -75,6 +64,9 @@ export default function Watch() {
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [subtitleUrl, setSubtitleUrl] = useState<string>('');
   const [autoNextEnabled, setAutoNextEnabled] = useState(true);
+  const [selectedQuality, setSelectedQuality] = useState<string>('');
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
 
   // Fallback state for anime data (if not found in context/props)
   const [apiAnime, setApiAnime] = useState<any>(undefined);
@@ -326,7 +318,7 @@ export default function Watch() {
                 animeId={anime.id}
                 isEmbed={isEmbed}
                 subtitleUrl={subtitleUrl}
-                autoPlay={isPlaying}
+                autoPlay={false}
                 onBack={() => navigate(getAnimeUrl(anime))}
                 onNobar={() => setShowNobar(true)}
                 onShare={() => {/* TODO: Implement share */}}
@@ -337,142 +329,6 @@ export default function Watch() {
                   setDuration(duration);
                 }}
               />
-                              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex items-center gap-2 bg-black/90 px-3 py-2 rounded-lg">
-                                <span className="text-xs text-white/70">Brightness</span>
-                                <input
-                                  type="range"
-                                  min={50}
-                                  max={150}
-                                  value={brightness}
-                                  onChange={(e) => setBrightness(parseInt(e.target.value))}
-                                  className="w-20 h-1 bg-white/20 rounded-full cursor-pointer"
-                                />
-                                <span className="text-xs text-white w-8">{brightness}%</span>
-                              </div>
-                            </div>
-
-                            {/* Picture-in-Picture - hidden on mobile */}
-                            <button
-                              onClick={togglePiP}
-                              className="hidden sm:block p-1.5 text-white hover:text-[#6C5DD3] transition-colors"
-                              title="Picture in Picture (P)"
-                            >
-                              <PictureInPicture2 className="w-4 h-4" />
-                            </button>
-
-                            {/* Screenshot - hidden on mobile */}
-                            <button
-                              onClick={takeScreenshot}
-                              className="hidden sm:block p-1.5 text-white hover:text-[#6C5DD3] transition-colors"
-                              title="Screenshot"
-                            >
-                              <Camera className="w-4 h-4" />
-                            </button>
-
-                            {/* Loop Toggle - hidden on mobile */}
-                            <button
-                              onClick={() => setIsLooping(!isLooping)}
-                              className={`hidden sm:block p-1.5 transition-colors ${isLooping ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                              title="Loop Video"
-                            >
-                              <Repeat className="w-4 h-4" />
-                            </button>
-
-                            {/* Auto Next Toggle - hidden on mobile */}
-                            <button
-                              onClick={() => setAutoNextEnabled(!autoNextEnabled)}
-                              className={`hidden sm:flex p-1.5 transition-colors items-center gap-1 ${autoNextEnabled ? 'text-green-400' : 'text-white/50'}`}
-                              title={autoNextEnabled ? 'Auto Next: ON' : 'Auto Next: OFF'}
-                            >
-                              <SkipForward className="w-4 h-4" />
-                              <span className="text-[10px] font-medium">{autoNextEnabled ? 'ON' : 'OFF'}</span>
-                            </button>
-
-                            {/* Quality Selector - only for direct streams with multiple qualities */}
-                            {availableQualities.length > 0 && !isEmbed && (
-                              <div className="relative hidden sm:block">
-                                <button
-                                  onClick={() => setShowQualityMenu(!showQualityMenu)}
-                                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${showQualityMenu ? 'bg-[#6C5DD3] text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                                  title="Video Quality"
-                                >
-                                  <Film className="w-3.5 h-3.5" />
-                                  <span>{selectedQuality || 'Auto'}</span>
-                                </button>
-
-                                {showQualityMenu && (
-                                  <div className="absolute bottom-full right-0 mb-2 bg-[#1A1A2E] border border-white/10 rounded-lg shadow-xl overflow-hidden min-w-[100px]">
-                                    {availableQualities.map((quality) => (
-                                      <button
-                                        key={quality}
-                                        onClick={async () => {
-                                          // Find stream with this quality
-                                          const stream = allDirectStreams.find(s => s.quality === quality);
-                                          if (stream) {
-                                            setSelectedQuality(quality);
-                                            // Generate proxy for this quality
-                                            const signedUrl = await getSignedVideoUrl(stream.url, id, currentEpisode);
-                                            setVideoUrl(signedUrl);
-                                          }
-                                          setShowQualityMenu(false);
-                                        }}
-                                        className={`w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-colors ${selectedQuality === quality ? 'text-[#6C5DD3] bg-white/5' : 'text-white'
-                                          }`}
-                                      >
-                                        {quality}
-                                        {selectedQuality === quality && ' ✓'}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Theater Mode - hidden on mobile */}
-                            <button
-                              onClick={() => setIsTheaterMode(!isTheaterMode)}
-                              className={`hidden lg:block p-1.5 transition-colors ${isTheaterMode ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                              title="Theater Mode (T)"
-                            >
-                              <Monitor className="w-4 h-4" />
-                            </button>
-
-                            {/* Settings Menu - hidden on mobile */}
-                            <div className="relative hidden sm:block">
-                              <button
-                                onClick={() => setShowSettings(!showSettings)}
-                                className={`p-1.5 transition-colors ${showSettings ? 'text-[#6C5DD3]' : 'text-white hover:text-[#6C5DD3]'}`}
-                                title="Settings"
-                              >
-                                <Settings className="w-4 h-4" />
-                              </button>
-                              {showSettings && (
-                                <div className="absolute bottom-full right-0 mb-2 bg-black/95 rounded-xl p-4 min-w-[200px] text-sm z-50">
-                                  <div className="flex items-center gap-2 mb-3 text-white font-medium">
-                                    <Keyboard className="w-4 h-4" />
-                                    Keyboard Shortcuts
-                                  </div>
-                                  <div className="space-y-1.5 text-xs text-white/70">
-                                    <div className="flex justify-between"><span>Play/Pause</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">Space / K</kbd></div>
-                                    <div className="flex justify-between"><span>Seek -10s</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">← / J</kbd></div>
-                                    <div className="flex justify-between"><span>Seek +10s</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">→ / L</kbd></div>
-                                    <div className="flex justify-between"><span>Volume Up</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">↑</kbd></div>
-                                    <div className="flex justify-between"><span>Volume Down</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">↓</kbd></div>
-                                    <div className="flex justify-between"><span>Mute</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">M</kbd></div>
-                                    <div className="flex justify-between"><span>Fullscreen</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">F</kbd></div>
-                                    <div className="flex justify-between"><span>Theater Mode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">T</kbd></div>
-                                    <div className="flex justify-between"><span>PiP</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">P</kbd></div>
-                                    <div className="flex justify-between"><span>Speed</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">S</kbd></div>
-                                    <div className="flex justify-between"><span>Next Episode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">N</kbd></div>
-                                    <div className="flex justify-between"><span>Prev Episode</span><kbd className="px-1.5 py-0.5 bg-white/10 rounded">B</kbd></div>
-                                  </div>
-                                  <div className="mt-3 pt-3 border-t border-white/10 text-xs text-white/50">
-                                    Double-click left/right to skip ±10s
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
             </div>
 
             {/* Episode List Sidebar - 1 column */}
