@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, memo } from 'react';
 import type { Anime } from '@/data/animeData';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Play, Bell, Star } from 'lucide-react';
-import OptimizedImage from '@/components/OptimizedImage';
 import { useApp } from '@/context/AppContext';
 import { BACKEND_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/auth';
@@ -24,13 +23,16 @@ const AnimeCard = memo(({ anime, isSubscribed, isLoading, onToggle }: {
                 className="group block sm:flex gap-0 sm:gap-4 p-0 sm:p-3 rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-[0_0_20px_rgba(108,93,211,0.1)]"
             >
                 {/* Poster */}
-                <div className="relative aspect-[3/4] sm:aspect-auto sm:w-20 sm:h-28 w-full rounded-xl overflow-hidden mb-2 sm:mb-0 ring-1 ring-white/10 group-hover:ring-[#6C5DD3]/30 transition-all duration-200">
-                    <OptimizedImage
+                <div className="relative w-[120px] sm:w-24 rounded-xl overflow-hidden mb-2 sm:mb-0 ring-1 ring-white/10 group-hover:ring-[#6C5DD3]/30 transition-all duration-200 flex-shrink-0"
+                     style={{ aspectRatio: '2/3' }}>
+                    <img
                         src={anime.poster}
                         alt={anime.title}
-                        aspectRatio="poster"
-                        className="group-hover:scale-105"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                        }}
                     />
                     
                     {/* Time Badge - Mobile */}

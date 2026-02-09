@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { fetchSkipTimes, type SkipTimes } from '@/services/aniskip';
 import {
   List,
   ChevronRight,
-  ChevronLeft as ChevronLeftIcon
+  ChevronLeft as ChevronLeftIcon,
+  Play
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -67,15 +69,32 @@ export default function Watch() {
   const [selectedQuality, setSelectedQuality] = useState<string>('');
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
   const [allDirectStreams, setAllDirectStreams] = useState<any[]>([]);
+  const [selectedServer, setSelectedServer] = useState('server1');
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [skipTimes, setSkipTimes] = useState<SkipTimes | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const durationRef = useRef<number>(0);
 
   // Fallback state for anime data (if not found in context/props)
   const [apiAnime, setApiAnime] = useState<any>(undefined);
   const contextAnime = id ? animeList.find(a => {
-    if (a.id === id) return true;
+    // Exact match berdasarkan cleanSlug (prioritas tertinggi)
     if (a.cleanSlug === id) return true;
+    
+    // Exact match berdasarkan generated slug dari title
     const generatedSlug = generateCleanSlug(a.title);
     if (generatedSlug === id) return true;
-    if (a.id.startsWith(id + '-')) return true;
+    
+    // Exact match berdasarkan ID asli
+    if (a.id === id) return true;
+    
+    // Cek apakah id mengandung angka di akhir (format: slug-12345)
+    // Hanya match jika ID asli persis sama, bukan hanya startsWith
+    // Ini mencegah 'sousou-no-frieren' match dengan 'sousou-no-frieren-2nd-season'
+    const idPattern = new RegExp(`^${id}-\\d+$`);
+    if (idPattern.test(a.id)) return true;
+    
     return false;
   }) : undefined;
   const anime = contextAnime || apiAnime;
@@ -86,9 +105,93 @@ export default function Watch() {
   })();
   const totalEpisodes = anime?.episodes || 1;
 
+  // Fallback intro time jika AniSkip tidak tersedia
+  // Default 1:25 (kebanyakan anime)
+  const introTime = useMemo(() => {
+    const title = anime?.title?.toLowerCase() || '';
+    const malId = anime?.id || anime?.malId;
+    
+    // Hardcode untuk anime yang kita tahu intro-nya
+    // Fumetsu no Anata e (To Your Eternity) - intro 0:48
+    if (malId === '59853' || title.includes('fumetsu') || title.includes('to your eternity')) {
+      return 48;
+    }
+    
+    // Jujutsu Kaisen - intro 1:30
+    if (title.includes('jujutsu kaisen')) return 90;
+    
+    // Attack on Titan - intro 1:30
+    if (title.includes('attack on titan') || title.includes('shingeki no kyojin')) return 90;
+    
+    // Demon Slayer - intro 1:30
+    if (title.includes('demon slayer') || title.includes('kimetsu no yaiba')) return 90;
+    
+    // One Piece - intro 2:00 (sering berubah)
+    if (title.includes('one piece')) return 120;
+    
+    // Default 1:25 (kebanyakan anime)
+    return 85;
+  }, [anime?.title, anime?.id, anime?.malId]);
+
+  // Generate chapters based on AniSkip data or fallback
+  const chapters = useMemo(() => {
+    if (duration <= 0) return [];
+    
+    const result = [];
+    
+    // Opening marker (from AniSkip or fallback)
+    if (skipTimes?.op) {
+      result.push({ time: skipTimes.op.startTime, label: 'Opening', color: '#FF6B6B' });
+      result.push({ time: skipTimes.op.endTime, label: 'Intro End', color: '#4ECDC4' });
+    } else {
+      result.push({ time: 0, label: 'Opening', color: '#FF6B6B' });
+      result.push({ time: introTime, label: 'Intro End', color: '#4ECDC4' });
+    }
+    
+    // Ending marker (from AniSkip or fallback)
+    if (skipTimes?.ed) {
+      result.push({ time: skipTimes.ed.startTime, label: 'Ending Start', color: '#FFE66D' });
+      result.push({ time: skipTimes.ed.endTime, label: 'Ending End', color: '#FF6B9D' });
+    } else if (duration > 300) {
+      result.push({ time: duration - 90, label: 'Ending Start', color: '#FFE66D' });
+    }
+    
+    // Episode end
+    result.push({ time: duration - 5, label: 'Episode End', color: '#95E1D3' });
+    
+    return result;
+  }, [duration, introTime, skipTimes]);
+
   // Nobar State
   const [showNobar, setShowNobar] = useState(false);
   const [nobarRoomId, setNobarRoomId] = useState<string | undefined>();
+
+  // Fetch AniSkip data (auto-detected intro/outro)
+  useEffect(() => {
+    const loadSkipTimes = async () => {
+      if (!anime?.id) {
+        setSkipTimes(null);
+        return;
+      }
+      
+      // Extract MAL ID from anime data (if available)
+      // Fallback: use anime.id as identifier
+      const malId = anime.malId || anime.id;
+      
+      logger.log('[Watch] Fetching AniSkip data for:', anime.title, 'EP', currentEpisode);
+      const times = await fetchSkipTimes(malId, currentEpisode);
+      
+      if (times) {
+        logger.log('[Watch] AniSkip found:', times);
+        setSkipTimes(times);
+      } else {
+        logger.log('[Watch] AniSkip not found, using fallback');
+        setSkipTimes(null);
+      }
+    };
+    
+    loadSkipTimes();
+  }, [anime?.id, anime?.title, anime?.malId, currentEpisode]);
 
   // Auto-join room from URL query param
   useEffect(() => {
@@ -153,8 +256,6 @@ export default function Watch() {
         // Filter video streams
         const directStreams = data.streams.filter((s: any) => s.type === 'direct'); // R2 Cloud
         const embedStreams = data.streams.filter((s: any) => s.type === 'embed');
-        const downloadStreams = data.streams.filter((s: any) => s.type === 'download');
-        setDownloadStreams(downloadStreams);
         setAllDirectStreams(directStreams);
 
         // Set subtitle URL if available
@@ -176,6 +277,7 @@ export default function Watch() {
             return numB - numA;
           });
         const uniqueQualities = [...new Set(qualities)] as string[];
+        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length);
         setAvailableQualities(uniqueQualities);
 
         let selectedStream;
@@ -185,6 +287,8 @@ export default function Watch() {
           // If quality is selected, use that, otherwise use highest quality
           const targetQuality = selectedQuality || uniqueQualities[0] || '';
           selectedStream = directStreams.find((s: any) => s.quality === targetQuality) || directStreams[0];
+
+          logger.log('[Watch] Selected quality:', targetQuality, 'Stream found:', selectedStream?.quality, 'URL:', selectedStream?.url?.substring(0, 50) + '...');
 
           // Update selected quality state if not set
           if (!selectedQuality && selectedStream.quality) {
@@ -217,24 +321,23 @@ export default function Watch() {
     };
 
     fetchVideoUrl();
-  }, [currentEpisode, anime, selectedServer]);
+  }, [currentEpisode, anime, selectedServer, selectedQuality]);
 
   // NOTE: Keyboard shortcuts are handled in the handleKeyDown useEffect below (line ~506)
   // This avoids duplicate event listeners for better performance
 
 
-  // Auto-hide controls while playing
+  // Auto-save progress every 10 seconds
   useEffect(() => {
-    // Save progress every 10 seconds
     const interval = setInterval(() => {
-      if (videoRef.current && id && isPlaying) {
+      if (videoRef.current && id && !videoRef.current.paused) {
         const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
         updateWatchProgress(id, `ep-${currentEpisode}`, currentEpisode, progress);
       }
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [id, currentEpisode, isPlaying, updateWatchProgress]);
+  }, [id, currentEpisode, updateWatchProgress]);
 
   const goToEpisode = (epNum: number) => {
     if (epNum >= 1 && epNum <= totalEpisodes && id) {
@@ -327,7 +430,25 @@ export default function Watch() {
                 onTimeUpdate={(time, duration) => {
                   setCurrentTime(time);
                   setDuration(duration);
+                  durationRef.current = duration;
                 }}
+                availableQualities={availableQualities}
+                selectedQuality={selectedQuality}
+                onQualityChange={(quality) => {
+                  logger.log('[Watch] Quality changed to:', quality);
+                  setSelectedQuality(quality);
+                }}
+                onSaveProgress={(time) => {
+                  // Progress juga disimpan ke backend via updateWatchProgress
+                  const currentDuration = durationRef.current;
+                  if (id && currentDuration > 0) {
+                    const progress = (time / currentDuration) * 100;
+                    updateWatchProgress(id, `ep-${currentEpisode}`, currentEpisode, progress);
+                  }
+                }}
+                chapters={chapters}
+                introEndTime={introTime}
+                skipTimes={skipTimes}
               />
             </div>
 
@@ -448,20 +569,6 @@ export default function Watch() {
 
 
             </div>
-
-            {downloadStreams.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-white text-sm font-medium mb-2">Download / Alternatif ({downloadStreams.length})</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {downloadStreams.map((stream, idx) => (
-                    <a key={idx} href={stream.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs">
-                      <span className="text-white/90">{stream.server} ({stream.quality})</span>
-                      <Share2 className="w-3 h-3 text-white/30" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Navigation with Up Next Preview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

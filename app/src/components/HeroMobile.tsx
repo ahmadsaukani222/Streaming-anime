@@ -60,11 +60,18 @@ export default function HeroMobile() {
   // Helper function to find anime by slug (id, cleanSlug, or generated from title)
   const findAnimeBySlug = useCallback((slug: string) => {
     return animeList.find(a => {
-      if (a.id === slug) return true;
+      // Prioritas: cleanSlug > generatedSlug > exact id > pattern id
       if (a.cleanSlug === slug) return true;
+      
       const generatedSlug = generateCleanSlug(a.title);
       if (generatedSlug === slug) return true;
-      if (a.id.startsWith(slug + '-')) return true;
+      
+      if (a.id === slug) return true;
+      
+      // Hanya match format 'slug-12345', bukan 'slug-2nd-season'
+      const idPattern = new RegExp(`^${slug}-\\d+$`);
+      if (idPattern.test(a.id)) return true;
+      
       return false;
     });
   }, [animeList]);
@@ -117,7 +124,7 @@ export default function HeroMobile() {
     link.rel = 'preload';
     link.as = 'image';
     link.href = firstImage;
-    link.setAttribute('fetchpriority', 'high');
+    link.setAttribute('fetchPriority', 'high');
     if (firstImage.endsWith('.webp')) {
       link.type = 'image/webp';
     }

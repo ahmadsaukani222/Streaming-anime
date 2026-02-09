@@ -24,7 +24,7 @@ const ListView = memo(function ListView({ anime, progress, episodeTitle }: Anime
         className="group flex gap-3 p-2 rounded-xl bg-white/[0.03] active:bg-white/[0.08] transition-colors"
       >
         {/* Poster - Small */}
-        <div className="relative flex-shrink-0 w-20 h-28 rounded-lg overflow-hidden">
+        <div className="relative flex-shrink-0 w-20 rounded-lg overflow-hidden" style={{ aspectRatio: '2/3' }}>
           <OptimizedImage
             src={anime.poster}
             alt={anime.title}
@@ -99,7 +99,7 @@ const CompactView = memo(function CompactView({ anime }: AnimeCardMobileProps) {
     <div className="group animate-fade-in">
       <Link to={getAnimeUrl(anime)} className="block">
         {/* Poster */}
-        <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
+        <div className="relative rounded-xl overflow-hidden bg-white/5" style={{ aspectRatio: '2/3' }}>
           <OptimizedImage
             src={anime.poster}
             alt={anime.title}
@@ -138,7 +138,7 @@ const PosterView = memo(function PosterView({ anime }: AnimeCardMobileProps) {
   return (
     <div className="group flex-shrink-0 w-28 animate-fade-in">
       <Link to={getAnimeUrl(anime)} className="block">
-        <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5">
+        <div className="relative rounded-xl overflow-hidden bg-white/5" style={{ aspectRatio: '2/3' }}>
           <OptimizedImage
             src={anime.poster}
             alt={anime.title}

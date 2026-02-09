@@ -67,15 +67,21 @@ export default function Hero() {
   // Helper function to find anime by slug (id, cleanSlug, or generated from title)
   const findAnimeBySlug = (slug: string): Anime | undefined => {
     return animeList.find(a => {
-      // 1. Cek exact match dengan id
-      if (a.id === slug) return true;
-      // 2. Cek match dengan cleanSlug yang tersimpan
+      // 1. Cek match dengan cleanSlug yang tersimpan (prioritas tertinggi)
       if (a.cleanSlug === slug) return true;
-      // 3. Cek match dengan slug yang di-generate dari title
+      
+      // 2. Cek match dengan slug yang di-generate dari title
       const generatedSlug = generateCleanSlug(a.title);
       if (generatedSlug === slug) return true;
-      // 4. Cek partial match dengan id (untuk backward compatibility)
-      if (a.id.startsWith(slug + '-')) return true;
+      
+      // 3. Cek exact match dengan id asli
+      if (a.id === slug) return true;
+      
+      // 4. Cek format 'slug-12345' (hanya untuk ID dengan angka di akhir)
+      // Hindari match dengan 'sousou-no-frieren-2nd-season'
+      const idPattern = new RegExp(`^${slug}-\\d+$`);
+      if (idPattern.test(a.id)) return true;
+      
       return false;
     });
   };
@@ -122,7 +128,7 @@ export default function Hero() {
     link.rel = 'preload';
     link.as = 'image';
     link.href = firstImage;
-    link.setAttribute('fetchpriority', 'high');
+    link.setAttribute('fetchPriority', 'high');
     if (firstImage.endsWith('.webp')) {
       link.type = 'image/webp';
     }

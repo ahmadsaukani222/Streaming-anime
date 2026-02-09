@@ -25,19 +25,19 @@ function getWebPUrl(originalUrl: string): string {
   return originalUrl.replace(/\.(jpg|jpeg|png|gif)$/i, '.webp');
 }
 
-// Get aspect ratio class
-function getAspectRatioClass(ratio: string): string {
+// Get aspect ratio style
+function getAspectRatioStyle(ratio: string): React.CSSProperties {
   switch (ratio) {
     case 'poster':
-      return 'aspect-[2/3]';
+      return { aspectRatio: '2/3' };
     case 'banner':
-      return 'aspect-[16/9]';
+      return { aspectRatio: '16/9' };
     case 'square':
-      return 'aspect-square';
+      return { aspectRatio: '1/1' };
     case 'video':
-      return 'aspect-video';
+      return { aspectRatio: '16/9' };
     default:
-      return '';
+      return {};
   }
 }
 
@@ -112,8 +112,8 @@ const OptimizedImage = memo(function OptimizedImage({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden bg-[#1A1A2E] ${aspectRatio ? getAspectRatioClass(aspectRatio) : ''
-        } ${containerClassName}`}
+      className={`relative overflow-hidden bg-[#1A1A2E] ${containerClassName}`}
+      style={aspectRatio ? getAspectRatioStyle(aspectRatio) : undefined}
     >
       {/* Loading placeholder - simple solid background, no shimmer animation to reduce flicker */}
       {!isLoaded && !hasError && (
@@ -138,8 +138,8 @@ const OptimizedImage = memo(function OptimizedImage({
             onError={handleError}
             className={`w-full h-full object-cover ${priority ? '' : isLoaded ? 'opacity-100' : 'opacity-0 transition-opacity duration-200'
               } ${className}`}
-            // Add fetchpriority for critical images
-            {...(priority && { fetchpriority: 'high' })}
+            // Add fetchPriority for critical images
+            {...(priority && { fetchPriority: 'high' })}
           />
         </picture>
       )}

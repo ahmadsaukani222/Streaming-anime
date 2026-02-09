@@ -72,17 +72,21 @@ export default function AnimeDetail() {
 
   // Find anime with dual URL support (id exact match, cleanSlug match, or partial id match)
   const anime = id ? animeList.find(a => {
-    // Exact match with id
-    if (a.id === id) return true;
-    // Match with cleanSlug
+    // Match with cleanSlug (prioritas tertinggi untuk URL bersih)
     if (a.cleanSlug === id) return true;
+    
     // Match with slug generated from title (for anime without cleanSlug)
     const generatedSlug = generateCleanSlug(a.title);
     if (generatedSlug === id) return true;
-    // Match if id starts with the slug (for backward compatibility)
-    if (a.id.startsWith(id + '-')) return true;
-    // Match if id contains the slug
-    if (a.id.includes(id)) return true;
+    
+    // Exact match with id asli
+    if (a.id === id) return true;
+    
+    // Match jika ID berformat 'slug-12345' (hanya untuk ID yang mengandung angka di akhir)
+    // Ini mencegah 'sousou-no-frieren' match dengan 'sousou-no-frieren-2nd-season'
+    const idPattern = new RegExp(`^${id}-\\d+$`);
+    if (idPattern.test(a.id)) return true;
+    
     return false;
   }) : undefined;
   
