@@ -431,7 +431,7 @@ export default function VideoPlayer({
 
   if (isEmbed) {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+      <div className="relative w-full aspect-video sm:aspect-video bg-black sm:rounded-xl overflow-hidden">
         <iframe
           src={videoUrl}
           className="w-full h-full border-0"
@@ -551,7 +551,7 @@ export default function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video bg-black rounded-xl overflow-hidden group select-none touch-none"
+      className="relative w-full aspect-video sm:aspect-video bg-black sm:rounded-xl overflow-hidden group select-none touch-none"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
       onTouchStart={handleTouchStart}
