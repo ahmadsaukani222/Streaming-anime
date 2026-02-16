@@ -171,6 +171,14 @@ export default function Admin() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAnime, setEditingAnime] = useState<any>(null);
   const [apiSearchResults, setApiSearchResults] = useState<any[]>([]);
+  
+  // Add Anime Feature State
+  const [isSearchingJikan, setIsSearchingJikan] = useState(false);
+  const [previewAnime, setPreviewAnime] = useState<any>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedAnimeIds, setSelectedAnimeIds] = useState<Set<number>>(new Set());
+  const [isAddingAnime, setIsAddingAnime] = useState<number | null>(null);
+  const [addingProgress, setAddingProgress] = useState<string>('');
 
   // Episode Management State
   const [selectedAnimeForEpisodes, setSelectedAnimeForEpisodes] = useState<any>(null);
@@ -2012,11 +2020,11 @@ export default function Admin() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* Note: TMDB Auto-import disabled (requires API key). Use Jikan API below instead. */}
+              <h2 className="text-xl font-bold text-white mb-2">Tambah Anime Baru (via Jikan API)</h2>
+              <p className="text-white/50 text-sm mb-6">Cari anime dari MyAnimeList, preview detail, dan tambahkan ke database</p>
 
-              <h2 className="text-xl font-bold text-white mb-6">Tambah Anime Baru (via Jikan API)</h2>
-
-              <div className="flex gap-4 mb-8">
+              {/* Search Section */}
+              <div className="flex gap-4 mb-6">
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                   <input
@@ -2028,88 +2036,112 @@ export default function Admin() {
                         const query = e.currentTarget.value;
                         if (!query) return;
                         try {
+                          setIsSearchingJikan(true);
                           setApiSearchResults([]);
+                          setSelectedAnimeIds(new Set());
                           const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=12`);
                           const data = await res.json();
                           setApiSearchResults(data.data || []);
                         } catch (err) {
                           logger.error('Jikan Error:', err);
+                          showToast('Gagal mencari anime', 'error');
+                        } finally {
+                          setIsSearchingJikan(false);
                         }
                       }
                     }}
                   />
+                  {isSearchingJikan && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-5 h-5 text-[#6C5DD3] animate-spin" />
+                    </div>
+                  )}
                 </div>
-                <Button className="h-full py-4 px-8 bg-[#6C5DD3] hover:bg-[#5a4ec0]">Cari</Button>
+                <Button 
+                  className="h-full py-4 px-8 bg-[#6C5DD3] hover:bg-[#5a4ec0]"
+                  disabled={isSearchingJikan}
+                >
+                  {isSearchingJikan ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Cari'}
+                </Button>
               </div>
 
-              {/* Results Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {apiSearchResults.map((anime: any, index: number) => (
-                  <div key={`${anime.mal_id}-${index}`} className="bg-[#1A1A2E] border border-white/5 rounded-2xl overflow-hidden hover:border-[#6C5DD3] transition-colors group relative">
-                    <div className="aspect-[2/3] relative">
-                      <img
-                        src={anime.images?.jpg?.large_image_url}
-                        alt={anime.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
+              {/* Bulk Add Actions */}
+              {apiSearchResults.length > 0 && (
+                <div className="flex items-center justify-between mb-4 p-4 bg-[#1A1A2E] border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedAnimeIds.size === apiSearchResults.length && apiSearchResults.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAnimeIds(new Set(apiSearchResults.map((a: any) => a.mal_id)));
+                          } else {
+                            setSelectedAnimeIds(new Set());
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-white/20 bg-[#1A1A2E] text-[#6C5DD3] focus:ring-[#6C5DD3]"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                        <Button
-                          onClick={async () => {
-                            // Generate readable ID (slug)
-                            const slug = anime.title
-                              .toLowerCase()
-                              .replace(/[^a-z0-9]+/g, '-')
-                              .replace(/^-|-$/g, '');
+                      <span className="text-white text-sm">Pilih Semua ({selectedAnimeIds.size}/{apiSearchResults.length})</span>
+                    </label>
+                  </div>
+                  {selectedAnimeIds.size > 0 && (
+                    <Button
+                      onClick={async () => {
+                        const selectedAnime = apiSearchResults.filter((a: any) => selectedAnimeIds.has(a.mal_id));
+                        let successCount = 0;
+                        let failCount = 0;
+                        
+                        for (const anime of selectedAnime) {
+                          setIsAddingAnime(anime.mal_id);
+                          setAddingProgress(`Menambahkan ${successCount + failCount + 1}/${selectedAnime.length}: ${anime.title}`);
+                          
+                          try {
+                            // Check duplicate
+                            const slug = anime.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                             const customId = `${slug}-${anime.mal_id}`;
-
-                            // Fetch TMDB ID from Jikan external links
+                            const exists = animeList.some(a => a.id === customId || a.malId === anime.mal_id);
+                            
+                            if (exists) {
+                              failCount++;
+                              continue;
+                            }
+                            
+                            // Fetch TMDB ID
                             let tmdbId: number | undefined;
                             try {
                               const extRes = await fetch(`https://api.jikan.moe/v4/anime/${anime.mal_id}/external`);
                               const extData = await extRes.json();
                               const tmdbLink = extData.data?.find((link: any) => link.name === 'TheMovieDB');
                               if (tmdbLink?.url) {
-                                // Extract TMDB ID from URL like: https://themoviedb.org/tv/12345
                                 const match = tmdbLink.url.match(/\/tv\/(\d+)/);
                                 if (match) tmdbId = parseInt(match[1]);
                               }
                             } catch (e) {
                               logger.warn('Failed to fetch TMDB ID:', e);
                             }
-
-                            // Map Jikan type to our type enum
-                            const typeMapping: Record<string, 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music'> = {
-                              'TV': 'TV',
-                              'Movie': 'Movie',
-                              'OVA': 'OVA',
-                              'ONA': 'ONA',
-                              'Special': 'Special',
-                              'Music': 'Music',
-                            };
-                            const animeType = typeMapping[anime.type] || 'TV';
-
-                            // Auto-translate synopsis to Indonesian
+                            
+                            // Translate synopsis
                             let translatedSynopsis = anime.synopsis || '';
-                            if (anime.synopsis && anime.synopsis.trim()) {
+                            if (anime.synopsis?.trim()) {
                               try {
-                                logger.log('[Admin/Jikan] Translating synopsis to Indonesian...');
                                 const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ text: anime.synopsis, targetLang: 'id' })
                                 });
                                 const translateData = await translateRes.json();
-                                if (translateData.translated) {
-                                  translatedSynopsis = translateData.translated;
-                                  logger.log('[Admin/Jikan] Synopsis translated successfully');
-                                }
-                              } catch (translateError) {
-                                logger.error('[Admin/Jikan] Translation failed:', translateError);
+                                if (translateData.translated) translatedSynopsis = translateData.translated;
+                              } catch (e) {
+                                logger.warn('Translation failed:', e);
                               }
                             }
-
-                            const newAnime = {
+                            
+                            const typeMapping: Record<string, 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music'> = {
+                              'TV': 'TV', 'Movie': 'Movie', 'OVA': 'OVA', 'ONA': 'ONA', 'Special': 'Special', 'Music': 'Music'
+                            };
+                            
+                            addAnime({
                               id: customId,
                               title: anime.title,
                               studio: anime.studios?.[0]?.name || 'Unknown',
@@ -2117,39 +2149,302 @@ export default function Admin() {
                               episodes: anime.episodes || 0,
                               rating: anime.score || 0,
                               status: (anime.status === 'Finished Airing' ? 'Completed' : 'Ongoing') as 'Ongoing' | 'Completed',
-                              type: animeType,
+                              type: typeMapping[anime.type] || 'TV',
                               synopsis: translatedSynopsis,
                               poster: anime.images?.jpg?.large_image_url,
                               genres: anime.genres?.map((g: any) => g.name) || [],
-                              malId: anime.mal_id, // Save MAL ID for Smashy Stream
-                              tmdbId, // Save TMDB ID for Smashy Stream /tv endpoint
-                            };
-                            // Call Add Anime
-                            addAnime(newAnime);
-                            // Feedback with modern toast
-                            showToast(`Berhasil menambahkan: ${anime.title}${tmdbId ? ` (TMDB: ${tmdbId})` : ''}`, 'success');
+                              malId: anime.mal_id,
+                              tmdbId,
+                            });
+                            successCount++;
+                          } catch (e) {
+                            failCount++;
+                          }
+                        }
+                        
+                        setIsAddingAnime(null);
+                        setAddingProgress('');
+                        setSelectedAnimeIds(new Set());
+                        showToast(`Berhasil: ${successCount}, Gagal: ${failCount}`, successCount > 0 ? 'success' : 'error');
+                      }}
+                      disabled={isAddingAnime !== null}
+                      className="bg-[#6C5DD3] hover:bg-[#5a4ec0]"
+                    >
+                      {isAddingAnime ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {addingProgress}</>
+                      ) : (
+                        <><Plus className="w-4 h-4 mr-2" /> Tambah {selectedAnimeIds.size} Anime</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Results Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {apiSearchResults.map((anime: any, index: number) => {
+                  // Check duplicate
+                  const slug = anime.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                  const customId = `${slug}-${anime.mal_id}`;
+                  const isDuplicate = animeList.some(a => a.id === customId || a.malId === anime.mal_id);
+                  const isSelected = selectedAnimeIds.has(anime.mal_id);
+                  const isCurrentlyAdding = isAddingAnime === anime.mal_id;
+                  
+                  return (
+                    <div key={`${anime.mal_id}-${index}`} className={`bg-[#1A1A2E] border rounded-2xl overflow-hidden transition-colors group relative ${isDuplicate ? 'border-red-500/30 opacity-60' : isSelected ? 'border-[#6C5DD3]' : 'border-white/5 hover:border-[#6C5DD3]'}`}>
+                      {/* Checkbox for bulk select */}
+                      <div className="absolute top-2 left-2 z-20">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedAnimeIds);
+                            if (e.target.checked) {
+                              newSet.add(anime.mal_id);
+                            } else {
+                              newSet.delete(anime.mal_id);
+                            }
+                            setSelectedAnimeIds(newSet);
                           }}
-                          className="w-full bg-[#6C5DD3]"
-                        >
-                          + Tambahkan
-                        </Button>
+                          disabled={isDuplicate || isCurrentlyAdding}
+                          className="w-5 h-5 rounded border-white/20 bg-black/50 text-[#6C5DD3] focus:ring-[#6C5DD3] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      
+                      {/* Duplicate badge */}
+                      {isDuplicate && (
+                        <div className="absolute top-2 right-2 z-20 px-2 py-0.5 bg-red-500/80 text-white text-[10px] font-bold rounded">
+                          Sudah Ada
+                        </div>
+                      )}
+                      
+                      <div className="aspect-[2/3] relative">
+                        <img
+                          src={anime.images?.jpg?.large_image_url}
+                          alt={anime.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        
+                        {/* Loading overlay */}
+                        {isCurrentlyAdding && (
+                          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4">
+                            <Loader2 className="w-8 h-8 text-[#6C5DD3] animate-spin mb-2" />
+                            <p className="text-white text-xs text-center">Menambahkan...</p>
+                          </div>
+                        )}
+                        
+                        {/* Action buttons overlay */}
+                        {!isCurrentlyAdding && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 gap-2">
+                            <Button
+                              onClick={() => {
+                                setPreviewAnime(anime);
+                                setIsPreviewOpen(true);
+                              }}
+                              className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                              size="sm"
+                            >
+                              <Eye className="w-4 h-4 mr-2" /> Preview
+                            </Button>
+                            <Button
+                              onClick={async () => {
+                                if (isDuplicate) {
+                                  showToast('Anime sudah ada di database', 'error');
+                                  return;
+                                }
+                                setIsAddingAnime(anime.mal_id);
+                                
+                                try {
+                                  // Fetch TMDB ID
+                                  let tmdbId: number | undefined;
+                                  try {
+                                    const extRes = await fetch(`https://api.jikan.moe/v4/anime/${anime.mal_id}/external`);
+                                    const extData = await extRes.json();
+                                    const tmdbLink = extData.data?.find((link: any) => link.name === 'TheMovieDB');
+                                    if (tmdbLink?.url) {
+                                      const match = tmdbLink.url.match(/\/tv\/(\d+)/);
+                                      if (match) tmdbId = parseInt(match[1]);
+                                    }
+                                  } catch (e) {
+                                    logger.warn('Failed to fetch TMDB ID:', e);
+                                  }
+                                  
+                                  // Translate synopsis
+                                  let translatedSynopsis = anime.synopsis || '';
+                                  if (anime.synopsis?.trim()) {
+                                    try {
+                                      const translateRes = await fetch(`${BACKEND_URL}/api/anime/translate`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: anime.synopsis, targetLang: 'id' })
+                                      });
+                                      const translateData = await translateRes.json();
+                                      if (translateData.translated) translatedSynopsis = translateData.translated;
+                                    } catch (e) {
+                                      logger.warn('Translation failed:', e);
+                                    }
+                                  }
+                                  
+                                  const typeMapping: Record<string, 'TV' | 'Movie' | 'OVA' | 'ONA' | 'Special' | 'Music'> = {
+                                    'TV': 'TV', 'Movie': 'Movie', 'OVA': 'OVA', 'ONA': 'ONA', 'Special': 'Special', 'Music': 'Music'
+                                  };
+                                  
+                                  addAnime({
+                                    id: customId,
+                                    title: anime.title,
+                                    studio: anime.studios?.[0]?.name || 'Unknown',
+                                    releasedYear: anime.year || new Date(anime.aired?.from).getFullYear() || 0,
+                                    episodes: anime.episodes || 0,
+                                    rating: anime.score || 0,
+                                    status: (anime.status === 'Finished Airing' ? 'Completed' : 'Ongoing') as 'Ongoing' | 'Completed',
+                                    type: typeMapping[anime.type] || 'TV',
+                                    synopsis: translatedSynopsis,
+                                    poster: anime.images?.jpg?.large_image_url,
+                                    genres: anime.genres?.map((g: any) => g.name) || [],
+                                    malId: anime.mal_id,
+                                    tmdbId,
+                                  });
+                                  showToast(`Berhasil menambahkan: ${anime.title}${tmdbId ? ` (TMDB: ${tmdbId})` : ''}`, 'success');
+                                } catch (e) {
+                                  showToast('Gagal menambahkan anime', 'error');
+                                } finally {
+                                  setIsAddingAnime(null);
+                                }
+                              }}
+                              disabled={isDuplicate}
+                              className={`w-full ${isDuplicate ? 'bg-gray-500 cursor-not-allowed' : 'bg-[#6C5DD3] hover:bg-[#5a4ec0]'}`}
+                              size="sm"
+                            >
+                              {isDuplicate ? 'Sudah Ada' : <><Plus className="w-4 h-4 mr-2" /> Tambah</>}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-white font-medium line-clamp-1" title={anime.title}>{anime.title}</h3>
+                        <div className="flex items-center justify-between mt-2 text-xs text-white/50">
+                          <span>{anime.type || 'TV'}</span>
+                          <span className="flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400 fill-current" /> {anime.score || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <h3 className="text-white font-medium line-clamp-1" title={anime.title}>{anime.title}</h3>
-                      <div className="flex items-center justify-between mt-2 text-xs text-white/50">
-                        <span>{anime.type || 'TV'}</span>
-                        <span className="flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400 fill-current" /> {anime.score || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {apiSearchResults.length === 0 && (
+              {apiSearchResults.length === 0 && !isSearchingJikan && (
                 <div className="text-center py-20 text-white/30">
                   <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p>Ketik judul anime dan tekan Enter untuk mencari</p>
+                </div>
+              )}
+
+              {/* Preview Modal */}
+              {isPreviewOpen && previewAnime && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-[#1A1A2E] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  >
+                    <div className="relative">
+                      {/* Banner */}
+                      <div className="h-48 bg-gradient-to-b from-[#6C5DD3]/20 to-[#1A1A2E] relative">
+                        <img
+                          src={previewAnime.images?.jpg?.large_image_url}
+                          alt={previewAnime.title}
+                          className="w-full h-full object-cover opacity-50"
+                        />
+                        <button
+                          onClick={() => setIsPreviewOpen(false)}
+                          className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
+                        >
+                          <X className="w-5 h-5 text-white" />
+                        </button>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="p-6 -mt-16 relative">
+                        <div className="flex gap-4 mb-4">
+                          <img
+                            src={previewAnime.images?.jpg?.large_image_url}
+                            alt={previewAnime.title}
+                            className="w-32 aspect-[2/3] rounded-xl border-2 border-[#1A1A2E] shadow-xl object-cover"
+                          />
+                          <div className="flex-1 pt-16">
+                            <h2 className="text-2xl font-bold text-white mb-2">{previewAnime.title}</h2>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {previewAnime.genres?.map((g: any) => (
+                                <span key={g.name} className="px-2 py-0.5 bg-white/10 rounded text-xs text-white/70">{g.name}</span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-white/50">
+                              <span className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-400 fill-current" /> {previewAnime.score || 'N/A'}</span>
+                              <span>{previewAnime.type || 'TV'}</span>
+                              <span>{previewAnime.episodes ? `${previewAnime.episodes} EP` : '? EP'}</span>
+                              <span>{previewAnime.year || new Date(previewAnime.aired?.from).getFullYear() || 'Unknown'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Synopsis */}
+                        <div className="mb-6">
+                          <h3 className="text-sm font-medium text-white/70 mb-2">Sinopsis</h3>
+                          <p className="text-white/60 text-sm leading-relaxed line-clamp-6">{previewAnime.synopsis || 'Tidak ada sinopsis.'}</p>
+                        </div>
+                        
+                        {/* Studios & Info */}
+                        <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                          <div>
+                            <span className="text-white/50">Studio:</span>
+                            <p className="text-white">{previewAnime.studios?.[0]?.name || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <span className="text-white/50">Status:</span>
+                            <p className="text-white">{previewAnime.status}</p>
+                          </div>
+                          <div>
+                            <span className="text-white/50">MAL ID:</span>
+                            <p className="text-white">{previewAnime.mal_id}</p>
+                          </div>
+                          <div>
+                            <span className="text-white/50">Rating:</span>
+                            <p className="text-white">{previewAnime.rating || 'N/A'}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              setIsPreviewOpen(false);
+                              // Trigger add
+                              const slug = previewAnime.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                              const customId = `${slug}-${previewAnime.mal_id}`;
+                              const isDuplicate = animeList.some(a => a.id === customId || a.malId === previewAnime.mal_id);
+                              
+                              if (!isDuplicate) {
+                                // Simulate add button click
+                                setIsAddingAnime(previewAnime.mal_id);
+                                setTimeout(() => setIsAddingAnime(null), 100);
+                              }
+                            }}
+                            className="flex-1 bg-[#6C5DD3] hover:bg-[#5a4ec0]"
+                          >
+                            <Plus className="w-4 h-4 mr-2" /> Tambahkan Anime
+                          </Button>
+                          <Button
+                            onClick={() => setIsPreviewOpen(false)}
+                            variant="outline"
+                            className="border-white/20 text-white hover:bg-white/10"
+                          >
+                            Tutup
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 </div>
               )}
 
