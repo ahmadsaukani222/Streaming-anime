@@ -744,6 +744,29 @@ export default function VideoPlayer({
               <track kind="subtitles" src={subtitleUrl} srcLang="id" label="Indonesia" default />
             )}
           </video>
+
+          {/* Watermark - Only show when paused/stopped with 100% opacity */}
+          <AnimatePresence>
+            {!isPlaying && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none"
+              >
+                {/* Center Logo Watermark - 100% opacity when paused */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img 
+                    src="/images/logo.webp" 
+                    alt="Animeku" 
+                    className="w-32 h-32 object-contain"
+                    style={{ opacity: 1 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-black">
