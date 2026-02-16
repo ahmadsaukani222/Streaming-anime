@@ -8,7 +8,8 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Play,
   Film,
-  Star
+  Star,
+  Lock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -273,7 +274,7 @@ export default function Watch() {
         }
 
         // Extract available qualities from direct streams
-        const qualities = directStreams
+        let qualities = directStreams
           .map((s: any) => s.quality)
           .filter((q: string) => q)
           .sort((a: string, b: string) => {
@@ -282,17 +283,38 @@ export default function Watch() {
             const numB = parseInt(b.replace('p', '')) || 0;
             return numB - numA;
           });
+        
+        // Filter qualities: 720p+ only for logged in users
+        const isLoggedIn = !!user;
+        if (!isLoggedIn) {
+          qualities = qualities.filter((q: string) => {
+            const resolution = parseInt(q.replace('p', '')) || 0;
+            return resolution <= 480; // Only 480p and below for guests
+          });
+          logger.log('[Watch] Guest user - filtered qualities to 480p max');
+        }
+        
         const uniqueQualities = [...new Set(qualities)] as string[];
-        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length);
+        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length, 'User:', isLoggedIn ? 'logged_in' : 'guest');
         setAvailableQualities(uniqueQualities);
 
         let selectedStream;
 
         // Priority: Direct (R2) > Embed > Error
         if (directStreams.length > 0) {
-          // If quality is selected, use that, otherwise use highest quality
-          const targetQuality = selectedQuality || uniqueQualities[0] || '';
-          selectedStream = directStreams.find((s: any) => s.quality === targetQuality) || directStreams[0];
+          // Filter streams for non-logged in users (max 480p)
+          const isLoggedIn = !!user;
+          const allowedStreams = isLoggedIn 
+            ? directStreams 
+            : directStreams.filter((s: any) => {
+                const resolution = parseInt(s.quality?.replace('p', '')) || 0;
+                return resolution <= 480;
+              });
+          
+          // If quality is selected and allowed, use that, otherwise use highest allowed quality
+          const isQualityAllowed = isLoggedIn || !selectedQuality || (parseInt(selectedQuality.replace('p', '')) || 0) <= 480;
+          const targetQuality = (selectedQuality && isQualityAllowed) ? selectedQuality : (uniqueQualities[0] || '');
+          selectedStream = allowedStreams.find((s: any) => s.quality === targetQuality) || allowedStreams[0] || directStreams[0];
 
           logger.log('[Watch] Selected quality:', targetQuality, 'Stream found:', selectedStream?.quality, 'URL:', selectedStream?.url?.substring(0, 50) + '...');
 
@@ -565,7 +587,49 @@ export default function Watch() {
                 </div>
               </div>
 
-
+              {/* Quality Selection */}
+              {availableQualities.length > 0 && (
+                <div>
+                  <h3 className="text-white text-sm font-medium mb-2 flex items-center gap-2">
+                    Kualitas Video
+                    {!user && (
+                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] rounded-full border border-yellow-500/30">
+                        Login untuk HD
+                      </span>
+                    )}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {availableQualities.map((quality) => {
+                      const isHD = (parseInt(quality.replace('p', '')) || 0) >= 720;
+                      const isLocked = !user && isHD;
+                      
+                      return (
+                        <button
+                          key={quality}
+                          onClick={() => !isLocked && setSelectedQuality(quality)}
+                          disabled={isLocked}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                            selectedQuality === quality
+                              ? 'bg-[#6C5DD3] text-white'
+                              : isLocked
+                                ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                          }`}
+                          title={isLocked ? 'Login untuk menonton kualitas HD' : quality}
+                        >
+                          {quality}
+                          {isLocked && <Lock className="w-3 h-3" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!user && (
+                    <p className="text-white/40 text-xs mt-2">
+                      <Link to="/login" className="text-[#6C5DD3] hover:underline">Login</Link> untuk menonton kualitas 720p dan 1080p
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Navigation with Up Next Preview */}
