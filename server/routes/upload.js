@@ -287,8 +287,8 @@ router.post('/confirm', validateBody([
                     // Auto-generate thumbnail for the episode (async, don't block response)
                     (async () => {
                         try {
-                            // Gunakan anime.id sebagai animeId untuk thumbnail
-                            const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, anime.id, episodeNum);
+                            // Gunakan animeId (custom ID) untuk thumbnail path
+                            const thumbnailUrl = await generateAndUploadThumbnail(publicUrl, animeId, episodeNum);
                             if (thumbnailUrl) {
                                 // Fetch fresh anime data to avoid version conflict
                                 const freshAnime = await CustomAnime.findOne({ id: animeId });
@@ -312,7 +312,7 @@ router.post('/confirm', validateBody([
                                         if (retryAnime && retryAnime.episodeData) {
                                             const retryEpIndex = retryAnime.episodeData.findIndex(e => e.ep === episodeNum);
                                             if (retryEpIndex !== -1 && !retryAnime.episodeData[retryEpIndex].thumbnail) {
-                                                const retryUrl = await generateAndUploadThumbnail(publicUrl, anime.id, episodeNum);
+                                                const retryUrl = await generateAndUploadThumbnail(publicUrl, animeId, episodeNum);
                                                 if (retryUrl) {
                                                     retryAnime.episodeData[retryEpIndex].thumbnail = retryUrl;
                                                     retryAnime.markModified('episodeData');
@@ -498,8 +498,8 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     // Auto-generate thumbnail for the episode (async, don't block response)
                     (async () => {
                         try {
-                            // Gunakan anime.id sebagai animeId untuk thumbnail
-                            const thumbnailUrl = await generateAndUploadThumbnail(result.url, anime.id, episodeNum);
+                            // Gunakan animeId (custom ID) untuk thumbnail path
+                            const thumbnailUrl = await generateAndUploadThumbnail(result.url, animeId, episodeNum);
                             if (thumbnailUrl) {
                                 // Fetch fresh anime data to avoid version conflict
                                 const freshAnime = await CustomAnime.findOne({ id: animeId });
@@ -523,7 +523,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                                         if (retryAnime && retryAnime.episodeData) {
                                             const retryEpIndex = retryAnime.episodeData.findIndex(e => e.ep === episodeNum);
                                             if (retryEpIndex !== -1 && !retryAnime.episodeData[retryEpIndex].thumbnail) {
-                                                const retryUrl = await generateAndUploadThumbnail(result.url, anime.id, episodeNum);
+                                                const retryUrl = await generateAndUploadThumbnail(result.url, animeId, episodeNum);
                                                 if (retryUrl) {
                                                     retryAnime.episodeData[retryEpIndex].thumbnail = retryUrl;
                                                     retryAnime.markModified('episodeData');
@@ -660,7 +660,7 @@ router.post('/regenerate-thumbnail', validateBody([
         }
 
         // Generate thumbnail
-        const thumbnailUrl = await generateAndUploadThumbnail(videoUrl, anime.id, episodeNum);
+        const thumbnailUrl = await generateAndUploadThumbnail(videoUrl, animeId, episodeNum);
 
         if (!thumbnailUrl) {
             return res.status(500).json({ error: 'Failed to generate thumbnail' });
