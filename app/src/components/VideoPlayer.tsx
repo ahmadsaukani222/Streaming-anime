@@ -745,49 +745,41 @@ export default function VideoPlayer({
             )}
           </video>
 
-          {/* Watermark Overlay */}
-          <div 
-            className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='rgba(255,255,255,0.08)' font-size='14' font-weight='600' font-family='Arial, sans-serif' transform='rotate(-30, 100, 50)'%3EANIMEKU.XYZ%3C/text%3E%3C/svg%3E")`,
-              backgroundRepeat: 'repeat',
-              backgroundSize: '150px 80px',
-              animation: 'watermarkMove 20s linear infinite',
-            }}
-          >
-            <style>{`
-              @keyframes watermarkMove {
-                0% { background-position: 0 0; }
-                100% { background-position: 150px 80px; }
-              }
-            `}</style>
-          </div>
+          {/* Watermark - Only show when paused/stopped */}
+          <AnimatePresence>
+            {!isPlaying && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none"
+              >
+                {/* Center Logo Watermark */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img 
+                    src="/images/logo.webp" 
+                    alt="Animeku" 
+                    className="w-32 h-32 opacity-20 object-contain"
+                    style={{ filter: 'grayscale(100%) brightness(200%)' }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Animated Corner Watermark */}
+          {/* Corner Logo - Always visible but subtle */}
           <motion.div 
-            className="absolute top-4 left-4 z-20 pointer-events-none"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
+            className="absolute top-4 right-4 z-20 pointer-events-none"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: isPlaying ? 0.3 : 0.6, y: 0 }}
+            transition={{ delay: 0.3 }}
           >
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-black/30 backdrop-blur-sm rounded-lg border border-white/10">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-[#6C5DD3] to-[#8B7BEF] flex items-center justify-center text-white text-[10px] font-bold">
-                A
-              </div>
-              <span className="text-white/60 text-xs font-medium tracking-wide">ANIMEKU.XYZ</span>
-            </div>
-          </motion.div>
-
-          {/* Time-based Watermark (shows user ID / timestamp to prevent screen recording) */}
-          <motion.div 
-            className="absolute bottom-20 right-4 z-20 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
-            transition={{ delay: 1 }}
-          >
-            <div className="text-white/30 text-[10px] font-mono tracking-wider">
-              {new Date().toISOString().slice(0, 19).replace('T', ' ')} • ANIMEKU
-            </div>
+            <img 
+              src="/images/logo.webp" 
+              alt="Animeku" 
+              className="w-8 h-8 object-contain opacity-50"
+            />
           </motion.div>
         </>
       ) : (
