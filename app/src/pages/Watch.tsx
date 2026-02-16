@@ -72,6 +72,8 @@ export default function Watch() {
   const [autoNextEnabled] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<string>('');
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [lockedQuality, setLockedQuality] = useState<string>('');
   const [, setAllDirectStreams] = useState<any[]>([]);
   const [selectedServer, setSelectedServer] = useState('server1');
   const [, setIsLoadingVideo] = useState(false);
@@ -274,7 +276,7 @@ export default function Watch() {
         }
 
         // Extract available qualities from direct streams
-        let qualities = directStreams
+        const qualities = directStreams
           .map((s: any) => s.quality)
           .filter((q: string) => q)
           .sort((a: string, b: string) => {
@@ -284,37 +286,26 @@ export default function Watch() {
             return numB - numA;
           });
         
-        // Filter qualities: 720p+ only for logged in users
-        const isLoggedIn = !!user;
-        if (!isLoggedIn) {
-          qualities = qualities.filter((q: string) => {
-            const resolution = parseInt(q.replace('p', '')) || 0;
-            return resolution <= 480; // Only 480p and below for guests
-          });
-          logger.log('[Watch] Guest user - filtered qualities to 480p max');
-        }
-        
         const uniqueQualities = [...new Set(qualities)] as string[];
-        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length, 'User:', isLoggedIn ? 'logged_in' : 'guest');
+        logger.log('[Watch] Available qualities:', uniqueQualities, 'Direct streams:', directStreams.length, 'User:', user ? 'logged_in' : 'guest');
         setAvailableQualities(uniqueQualities);
 
         let selectedStream;
 
         // Priority: Direct (R2) > Embed > Error
         if (directStreams.length > 0) {
-          // Filter streams for non-logged in users (max 480p)
+          // For guests, auto-select max 480p initially
           const isLoggedIn = !!user;
-          const allowedStreams = isLoggedIn 
-            ? directStreams 
-            : directStreams.filter((s: any) => {
-                const resolution = parseInt(s.quality?.replace('p', '')) || 0;
-                return resolution <= 480;
-              });
+          const isGuestTryingHD = !isLoggedIn && selectedQuality && (parseInt(selectedQuality.replace('p', '')) || 0) > 480;
           
-          // If quality is selected and allowed, use that, otherwise use highest allowed quality
-          const isQualityAllowed = isLoggedIn || !selectedQuality || (parseInt(selectedQuality.replace('p', '')) || 0) <= 480;
-          const targetQuality = (selectedQuality && isQualityAllowed) ? selectedQuality : (uniqueQualities[0] || '');
-          selectedStream = allowedStreams.find((s: any) => s.quality === targetQuality) || allowedStreams[0] || directStreams[0];
+          // If guest trying to select HD, use 480p instead
+          const effectiveQuality = isGuestTryingHD ? '' : selectedQuality;
+          const targetQuality = effectiveQuality || uniqueQualities.find((q: string) => {
+            const res = parseInt(q.replace('p', '')) || 0;
+            return isLoggedIn || res <= 480;
+          }) || uniqueQualities[0] || '';
+          
+          selectedStream = directStreams.find((s: any) => s.quality === targetQuality) || directStreams[0];
 
           logger.log('[Watch] Selected quality:', targetQuality, 'Stream found:', selectedStream?.quality, 'URL:', selectedStream?.url?.substring(0, 50) + '...');
 
@@ -462,6 +453,16 @@ export default function Watch() {
                 availableQualities={availableQualities}
                 selectedQuality={selectedQuality}
                 onQualityChange={(quality) => {
+                  const isHD = (parseInt(quality.replace('p', '')) || 0) >= 720;
+                  
+                  // Check if guest trying to watch HD
+                  if (!user && isHD) {
+                    logger.log('[Watch] Guest attempted to switch to HD:', quality);
+                    setLockedQuality(quality);
+                    setShowLoginPrompt(true);
+                    return; // Don't change quality
+                  }
+                  
                   logger.log('[Watch] Quality changed to:', quality);
                   setSelectedQuality(quality);
                 }}
@@ -606,16 +607,22 @@ export default function Watch() {
                       return (
                         <button
                           key={quality}
-                          onClick={() => !isLocked && setSelectedQuality(quality)}
-                          disabled={isLocked}
+                          onClick={() => {
+                            if (isLocked) {
+                              setLockedQuality(quality);
+                              setShowLoginPrompt(true);
+                            } else {
+                              setSelectedQuality(quality);
+                            }
+                          }}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
                             selectedQuality === quality
                               ? 'bg-[#6C5DD3] text-white'
                               : isLocked
-                                ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'
+                                ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 cursor-pointer'
                                 : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
                           }`}
-                          title={isLocked ? 'Login untuk menonton kualitas HD' : quality}
+                          title={isLocked ? 'Klik untuk unlock kualitas HD' : quality}
                         >
                           {quality}
                           {isLocked && <Lock className="w-3 h-3" />}
@@ -631,6 +638,50 @@ export default function Watch() {
                 </div>
               )}
             </div>
+
+            {/* Login Prompt Modal for HD Quality */}
+            {showLoginPrompt && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-[#1A1A2E] border border-white/10 rounded-2xl max-w-md w-full p-6 text-center"
+                >
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                    <Lock className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Kualitas {lockedQuality} Terkunci
+                  </h3>
+                  <p className="text-white/60 mb-6">
+                    Upgrade ke akun gratis untuk menonton anime dengan kualitas <span className="text-yellow-400 font-medium">{lockedQuality} HD</span>. 
+                    Nikmati pengalaman menonton yang lebih jernih!
+                  </p>
+                  <div className="flex gap-3">
+                    <Link
+                      to="/register"
+                      onClick={() => setShowLoginPrompt(false)}
+                      className="flex-1 py-3 bg-[#6C5DD3] hover:bg-[#5a4ec0] text-white font-medium rounded-xl transition-colors"
+                    >
+                      Daftar Gratis
+                    </Link>
+                    <Link
+                      to="/login"
+                      onClick={() => setShowLoginPrompt(false)}
+                      className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-colors"
+                    >
+                      Login
+                    </Link>
+                  </div>
+                  <button
+                    onClick={() => setShowLoginPrompt(false)}
+                    className="mt-4 text-white/40 hover:text-white text-sm transition-colors"
+                  >
+                    Lanjutkan dengan 480p
+                  </button>
+                </motion.div>
+              </div>
+            )}
 
             {/* Navigation with Up Next Preview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
