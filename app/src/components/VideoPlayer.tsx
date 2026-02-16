@@ -745,7 +745,7 @@ export default function VideoPlayer({
             )}
           </video>
 
-          {/* Watermark - Only show when paused/stopped */}
+          {/* Watermark - Only show when paused/stopped with 100% opacity */}
           <AnimatePresence>
             {!isPlaying && (
               <motion.div
@@ -755,32 +755,18 @@ export default function VideoPlayer({
                 transition={{ duration: 0.3 }}
                 className="absolute inset-0 pointer-events-none z-20 overflow-hidden select-none"
               >
-                {/* Center Logo Watermark */}
+                {/* Center Logo Watermark - 100% opacity when paused */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <img 
                     src="/images/logo.webp" 
                     alt="Animeku" 
-                    className="w-32 h-32 opacity-20 object-contain"
-                    style={{ filter: 'grayscale(100%) brightness(200%)' }}
+                    className="w-32 h-32 object-contain"
+                    style={{ opacity: 1 }}
                   />
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Corner Logo - Always visible but subtle */}
-          <motion.div 
-            className="absolute top-4 right-4 z-20 pointer-events-none"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: isPlaying ? 0.3 : 0.6, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <img 
-              src="/images/logo.webp" 
-              alt="Animeku" 
-              className="w-8 h-8 object-contain opacity-50"
-            />
-          </motion.div>
         </>
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-black">
