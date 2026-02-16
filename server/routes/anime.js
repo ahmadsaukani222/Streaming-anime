@@ -1060,7 +1060,7 @@ router.post('/:id/episode/:ep/thumbnail', requireAdmin, async (req, res) => {
 
         // Generate thumbnail (random 3-10 min if no timestamp provided)
         const { generateThumbnail } = require('../utils/videoThumbnail');
-        const thumbnailUrl = await generateThumbnail(targetVideoUrl, id, parseInt(ep), timestamp);
+        const thumbnailUrl = await generateThumbnail(targetVideoUrl, anime.id, parseInt(ep), timestamp);
 
         // Save to episode data
         anime.episodeData[epIndex].thumbnail = thumbnailUrl;
