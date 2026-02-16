@@ -1777,20 +1777,160 @@ export default function AnimeDetail() {
         </div>
       </section>
 
-      {/* More Anime Section */}
+      {/* More Anime Section - Smart Recommendations */}
       <section className="py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold font-heading text-white mb-6">
-            Anime Lainnya
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {animeList
+          {(() => {
+            // Helper functions untuk smart recommendation
+            const extractBaseTitle = (title: string) => {
+              return title
+                .toLowerCase()
+                .replace(/\s+season\s+\d+/gi, '')
+                .replace(/\s+part\s+\d+/gi, '')
+                .replace(/\s+\d+(st|nd|rd|th)\s+season/gi, '')
+                .replace(/\s+s\d+/gi, '')
+                .replace(/\s+:\s*.+$/g, '')
+                .replace(/\s+movie/gi, '')
+                .replace(/\s+ova/gi, '')
+                .replace(/\s+special/gi, '')
+                .replace(/\s+ona/gi, '')
+                .trim();
+            };
+
+            const getSeasonNumber = (title: string) => {
+              const seasonMatch = title.match(/season\s+(\d+)/i);
+              if (seasonMatch) return parseInt(seasonMatch[1]);
+              const partMatch = title.match(/part\s+(\d+)/i);
+              if (partMatch) return parseInt(partMatch[1]);
+              const ordinalMatch = title.match(/(\d+)(st|nd|rd|th)\s+season/i);
+              if (ordinalMatch) return parseInt(ordinalMatch[1]);
+              const sMatch = title.match(/\s+S(\d+)/i);
+              if (sMatch) return parseInt(sMatch[1]);
+              return 0;
+            };
+
+            const currentBaseTitle = extractBaseTitle(anime.title);
+            const currentSeason = getSeasonNumber(anime.title);
+            const currentGenres = new Set(anime.genres);
+
+            // Score and sort anime
+            const scoredAnime = animeList
               .filter(a => a.id !== anime.id)
-              .slice(0, 6)
-              .map((related, index) => (
-                <AnimeCard key={related.id} anime={related} index={index} />
-              ))}
-          </div>
+              .map(a => {
+                let score = 0;
+                const aBaseTitle = extractBaseTitle(a.title);
+                const aSeason = getSeasonNumber(a.title);
+
+                // Same franchise (highest priority)
+                if (aBaseTitle === currentBaseTitle) {
+                  score += 1000;
+                  if (aSeason === currentSeason + 1) score += 500;
+                  if (aSeason === currentSeason - 1) score += 400;
+                }
+
+                // Similar words in title
+                const titleWords = currentBaseTitle.split(' ').filter(w => w.length > 3);
+                const matchWords = titleWords.filter(word => 
+                  aBaseTitle.includes(word) || a.title.toLowerCase().includes(word)
+                ).length;
+                score += matchWords * 50;
+
+                // Genre overlap
+                const genreOverlap = a.genres.filter(g => currentGenres.has(g)).length;
+                score += genreOverlap * 30;
+
+                // Same studio
+                if (a.studio && anime.studio && a.studio === anime.studio) {
+                  score += 25;
+                }
+
+                // Same status
+                if (a.status === anime.status) {
+                  score += 10;
+                }
+
+                // Recent release year
+                if (a.releasedYear && anime.releasedYear) {
+                  const yearDiff = Math.abs(a.releasedYear - anime.releasedYear);
+                  if (yearDiff <= 2) score += 20 - yearDiff * 5;
+                }
+
+                return { anime: a, score, isFranchise: aBaseTitle === currentBaseTitle };
+              });
+
+            // Sort by score
+            scoredAnime.sort((a, b) => b.score - a.score);
+
+            // Separate franchise and similar
+            const franchiseAnime = scoredAnime.filter(a => a.isFranchise).slice(0, 6);
+            const similarAnime = scoredAnime.filter(a => !a.isFranchise).slice(0, 6);
+
+            return (
+              <>
+                {/* Same Franchise */}
+                {franchiseAnime.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-bold font-heading text-white mb-2">
+                      Season & Franchise
+                    </h2>
+                    <p className="text-white/50 text-sm mb-4">
+                      Lanjutkan perjalanan seri {currentBaseTitle}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                      {franchiseAnime.map(({ anime: related }, index) => {
+                        const relatedSeason = getSeasonNumber(related.title);
+                        let label = '';
+                        let labelColor = '';
+                        
+                        if (relatedSeason === currentSeason + 1) {
+                          label = 'Next';
+                          labelColor = 'bg-green-500/80 text-white';
+                        } else if (relatedSeason === currentSeason - 1) {
+                          label = 'Prev';
+                          labelColor = 'bg-blue-500/80 text-white';
+                        } else if (relatedSeason > 0) {
+                          label = `S${relatedSeason}`;
+                          labelColor = 'bg-purple-500/80 text-white';
+                        } else if (related.title.toLowerCase().includes('movie')) {
+                          label = 'Movie';
+                          labelColor = 'bg-yellow-500/80 text-black';
+                        } else {
+                          label = 'Series';
+                          labelColor = 'bg-white/80 text-black';
+                        }
+
+                        return (
+                          <div key={related.id} className="relative group">
+                            <AnimeCard anime={related} index={index} />
+                            <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${labelColor} z-10`}>
+                              {label}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Similar Anime */}
+                {similarAnime.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold font-heading text-white mb-2">
+                      Rekomendasi Serupa
+                    </h2>
+                    <p className="text-white/50 text-sm mb-4">
+                      Anime dengan genre dan tema yang mirip
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                      {similarAnime.map(({ anime: related }, index) => (
+                        <AnimeCard key={related.id} anime={related} index={index} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </section>
 
