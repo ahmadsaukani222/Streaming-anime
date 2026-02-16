@@ -2934,6 +2934,16 @@ export default function Admin() {
                                     const data = await res.json();
                                     if (data.success) {
                                       setEpisodeToEdit({ ...episodeToEdit, thumbnail: data.thumbnailUrl, _thumbnailSource: videoUrl });
+                                      
+                                      // Also update selectedAnimeForEpisodes so handleSaveEpisode doesn't overwrite
+                                      setSelectedAnimeForEpisodes((prev: any) => {
+                                        if (!prev || !prev.episodeData) return prev;
+                                        const updatedEpisodes = prev.episodeData.map((ep: any) =>
+                                          ep.ep === episodeToEdit.ep ? { ...ep, thumbnail: data.thumbnailUrl } : ep
+                                        );
+                                        return { ...prev, episodeData: updatedEpisodes };
+                                      });
+                                      
                                       toast({ title: 'Success', description: 'Thumbnail berhasil dibuat!', variant: 'success' });
                                     } else {
                                       toast({ title: 'Error', description: data.error || 'Gagal membuat thumbnail', variant: 'destructive' });
