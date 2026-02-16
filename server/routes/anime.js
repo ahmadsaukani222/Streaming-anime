@@ -52,6 +52,11 @@ function replaceWithCachedUrlsBatch(animeList) {
 // Get all custom anime (that are not deleted)
 router.get('/custom', async (req, res) => {
     try {
+        // Disable caching untuk data selalu fresh
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         // get blacklist
         const deleted = await DeletedAnime.find().select('animeId');
         const deletedIds = deleted.map(d => d.animeId);
@@ -256,6 +261,11 @@ router.get('/trending', async (req, res) => {
 // Get Single Anime by ID or Clean Slug (Custom or Scraped fallback)
 router.get('/:id', async (req, res) => {
     try {
+        // Disable caching untuk data selalu fresh
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         const { id } = req.params;
 
         // 1. Try DB first with dual URL support (id or cleanSlug)
